@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using System.Threading.Tasks;
 
 namespace GenericRpc.Transport
@@ -9,8 +10,8 @@ namespace GenericRpc.Transport
         event Action OnConnected;
         event Action OnDisconnected;
         bool IsConnected { get; }
-        void Start(string ip, ushort port);
-        void Connect(string ip, ushort port);
+        Task StartAsync(IPEndPoint endpoint);
+        Task ConnectAsync(IPEndPoint endpoint);
         Task SendMessageAsync(RpcMessage message);
     }
 }

@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.1.32407.343
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GenericRpc", "GenericRpc\GenericRpc.csproj", "{13BEEEA5-9B9C-41F9-9FE6-3D825FD8A248}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GenericRpc", "GenericRpc\GenericRpc.csproj", "{13BEEEA5-9B9C-41F9-9FE6-3D825FD8A248}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GenericRpc.UnitTests", "GenericRpc.UnitTests\GenericRpc.UnitTests.csproj", "{FD48A775-136A-4B6C-820E-A5B3FC930C5C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GenericRpc.UnitTests", "GenericRpc.UnitTests\GenericRpc.UnitTests.csproj", "{FD48A775-136A-4B6C-820E-A5B3FC930C5C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GenericRpc.Socket", "GenericRpc.Socket\GenericRpc.Socket.csproj", "{E80AB2F2-C0DE-4C44-AE46-71894F8943B7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GenericRpc.SocketTransport", "GenericRpc.SocketTransport\GenericRpc.SocketTransport.csproj", "{E80AB2F2-C0DE-4C44-AE46-71894F8943B7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
