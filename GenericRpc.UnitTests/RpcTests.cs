@@ -32,7 +32,7 @@ namespace GenericRpc.UnitTests
             var sum = service.Sum(123, 321);
             Assert.AreEqual(444, sum);
 
-            service.ShowMessage("Hello server!");
+            service.ShowMessage("Hello server!", "gg2");
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using GenericRpc.Exceptions;
 using GenericRpc.Serialization;
+using GenericRpc.Transport;
 using System;
 using System.Collections.Generic;
 

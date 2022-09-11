@@ -1,5 +1,6 @@
 ﻿using GenericRpc.Exceptions;
 using GenericRpc.Serialization;
+using GenericRpc.Transport;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -57,14 +58,9 @@ namespace GenericRpc
             if (_serializer == null) throw new GenericRpcException("Serializer shoudn't be null");
             if (_transportLayer == null) throw new GenericRpcException("Transport layer shoudn't be null");
 
-            var speakerServiceByInterface = _speakerServices.ToDictionary(type => type, type => CreateSpeakerServiceInstance(type, _transportLayer));
+            var speakerServiceByInterface = _speakerServices.ToDictionary(type => type, type => ClassGenerator.GenerateSpeakerInstance(type, _transportLayer, _serializer));
 
             return new Communicator(_serializer, _transportLayer, speakerServiceByInterface, _listenerServicebyInterface);
-        }
-
-        private static object CreateSpeakerServiceInstance(Type type, ITransportLayer transportLayer)
-        {
-            throw new NotImplementedException();
         }
     }
 }

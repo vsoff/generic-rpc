@@ -1,4 +1,4 @@
-﻿namespace GenericRpc
+﻿namespace GenericRpc.Transport
 {
     public enum RpcMessageType
     {
