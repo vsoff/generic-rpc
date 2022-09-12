@@ -1,5 +1,4 @@
-﻿using GenericRpc.Serialization;
-using GenericRpc.Transport;
+﻿using GenericRpc.Transport;
 using System;
 using System.Linq;
 using System.Reflection;
@@ -9,7 +8,7 @@ namespace GenericRpc
 {
     internal static class ClassGenerator
     {
-        public static object GenerateSpeakerInstance(Type interfaceType, ITransportLayer transportLayer, ICommunicatorSerializer serializer)
+        public static object GenerateSpeakerInstance(Type interfaceType, IMediator mediator)
         {
             // Generate module.
             var generatedAssemblyName = $"{nameof(GenericRpc)}.Generated";
@@ -23,12 +22,11 @@ namespace GenericRpc
             typeBuilder.AddInterfaceImplementation(interfaceType);
 
             // Generate constructor.
-            var ctrArgumentsTypes = new Type[] { typeof(ITransportLayer), typeof(ICommunicatorSerializer) };
+            var ctrArgumentsTypes = new Type[] { typeof(IMediator) };
             var ctrBuilder = typeBuilder.DefineConstructor(MethodAttributes.Public, CallingConventions.HasThis, ctrArgumentsTypes);
             var ctrIlGenerator = ctrBuilder.GetILGenerator();
             ctrIlGenerator.Emit(OpCodes.Ldarg_0);
             ctrIlGenerator.Emit(OpCodes.Ldarg_1);
-            ctrIlGenerator.Emit(OpCodes.Ldarg_2);
             var baseConstructor = typeof(SpeakerService).GetConstructor(ctrArgumentsTypes);
             ctrIlGenerator.Emit(OpCodes.Callvirt, baseConstructor);
             ctrIlGenerator.Emit(OpCodes.Nop);
@@ -85,7 +83,7 @@ namespace GenericRpc
 
             // Generate type and return instance.
             var generatedType = typeBuilder.CreateTypeInfo();
-            return Activator.CreateInstance(generatedType, new object[] { transportLayer, serializer });
+            return Activator.CreateInstance(generatedType, new object[] { mediator });
         }
     }
 }

@@ -16,18 +16,16 @@ namespace GenericRpc
 
         public CommunicatorBuilder SetSerializer(ICommunicatorSerializer serializer)
         {
-            if (serializer == null) throw new ArgumentNullException(nameof(serializer));
-
-            _serializer = serializer;
+            _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
             return this;
         }
+
         public CommunicatorBuilder SetTransportLayer(ITransportLayer transportLayer)
         {
-            if (transportLayer == null) throw new ArgumentNullException(nameof(transportLayer));
-
-            _transportLayer = transportLayer;
+            _transportLayer = transportLayer ?? throw new ArgumentNullException(nameof(transportLayer));
             return this;
         }
+
         public CommunicatorBuilder RegisterSpeakerService<TServiceInterface>()
         {
             if (!typeof(TServiceInterface).IsInterface)
@@ -39,6 +37,7 @@ namespace GenericRpc
             _speakerServices.Add(typeof(TServiceInterface));
             return this;
         }
+
         public CommunicatorBuilder RegisterListenerService<TServiceInterface>(TServiceInterface implementation)
         {
             if (implementation == null) throw new ArgumentNullException(nameof(implementation));
@@ -55,12 +54,15 @@ namespace GenericRpc
 
         public Communicator Build()
         {
-            if (_serializer == null) throw new GenericRpcException("Serializer shoudn't be null");
-            if (_transportLayer == null) throw new GenericRpcException("Transport layer shoudn't be null");
+            if (_serializer == null) throw new GenericRpcException("Serializer not setted");
+            if (_transportLayer == null) throw new GenericRpcException("Transport layer not setted");
 
-            var speakerServiceByInterface = _speakerServices.ToDictionary(type => type, type => ClassGenerator.GenerateSpeakerInstance(type, _transportLayer, _serializer));
+            var mediator = new Mediator(_serializer, _transportLayer);
+            var speakerServiceByInterface = _speakerServices.ToDictionary(type => type, type => ClassGenerator.GenerateSpeakerInstance(type, mediator));
+            var serviceContainer = new ServicesContainer(speakerServiceByInterface, _listenerServicebyInterface);
+            mediator.SetServicesContainer(serviceContainer);
 
-            return new Communicator(_serializer, _transportLayer, speakerServiceByInterface, _listenerServicebyInterface);
+            return new Communicator(serviceContainer, mediator);
         }
     }
 }

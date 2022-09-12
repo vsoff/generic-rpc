@@ -13,7 +13,9 @@ namespace GenericRpc.UnitTests
         [TestMethod]
         public void Test()
         {
-            var generatedInstance = (IExampleService)ClassGenerator.GenerateSpeakerInstance(typeof(IExampleService), new SocketTransportLayer(), new DefaultCommunicatorSerializer());
+            var mediator = new Mediator();
+
+            var generatedInstance = (IExampleService)ClassGenerator.GenerateSpeakerInstance(typeof(IExampleService), mediator);
 
             try { generatedInstance.GetIndex(); }
             catch { }
@@ -39,7 +41,7 @@ namespace GenericRpc.UnitTests
 
         private class ClientService : SpeakerService, IExampleService
         {
-            public ClientService(ITransportLayer transportLayer, ICommunicatorSerializer serializer) : base(transportLayer, serializer)
+            public ClientService(IMediator mediator) : base(mediator)
             {
             }
 
@@ -67,6 +69,11 @@ namespace GenericRpc.UnitTests
             {
                 Execute(nameof(IExampleService), nameof(GetIndex));
             }
+        }
+
+        public interface IA
+        {
+
         }
     }
 }

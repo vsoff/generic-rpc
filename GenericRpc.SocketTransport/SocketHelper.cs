@@ -21,7 +21,7 @@ namespace GenericRpc.SocketTransport
                 if (!socket.Connected)
                     return false;
 
-                await SendPackageMessageAsync(socket, message);
+                await SendMessageAsync(socket, message);
                 return true;
             }
             catch
@@ -33,7 +33,7 @@ namespace GenericRpc.SocketTransport
         /// <summary>
         /// Sends a <see cref="PackageMessage"/> on a <see cref="Socket"/>.
         /// </summary>
-        public static async Task SendPackageMessageAsync(this Socket socket, RpcMessage message)
+        public static async Task SendMessageAsync(this Socket socket, RpcMessage message)
         {
             if (socket == null) throw new ArgumentNullException(nameof(socket));
             if (message == null) throw new ArgumentNullException(nameof(message));
@@ -51,7 +51,7 @@ namespace GenericRpc.SocketTransport
             await socket.SendAsync(new ArraySegment<byte>(fullResponse), SocketFlags.None);
         }
 
-        public static async IAsyncEnumerable<RpcMessage> StartReceivePackageMessagesAsync(this Socket socket)
+        public static async IAsyncEnumerable<RpcMessage> StartReceiveMessagesAsync(this Socket socket)
         {
             byte[] unreadedBytes = new byte[0];
             while (socket.Connected)

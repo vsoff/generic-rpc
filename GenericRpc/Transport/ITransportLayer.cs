@@ -4,14 +4,11 @@ using System.Threading.Tasks;
 
 namespace GenericRpc.Transport
 {
+    public delegate void MessageReceived(RpcMessage message, Guid? clientId);
+
     public interface ITransportLayer
     {
-        event Action<RpcMessage> OnReceiveMessage;
-        event Action OnConnected;
-        event Action OnDisconnected;
-        bool IsConnected { get; }
-        Task StartAsync(IPEndPoint endpoint);
-        Task ConnectAsync(IPEndPoint endpoint);
-        Task SendMessageAsync(RpcMessage message);
+        Task SendMessageAsync(RpcMessage message, Guid? clientId);
+        event MessageReceived OnReceiveMessage;
     }
 }
