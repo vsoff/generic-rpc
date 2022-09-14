@@ -1,6 +1,5 @@
-using GenericRpc.SocketTransport.Common;
+using GenericRpc.SocketTransport.UnitTests.Common;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace GenericRpc.SocketTransport.UnitTests
@@ -11,59 +10,35 @@ namespace GenericRpc.SocketTransport.UnitTests
         [TestMethod]
         public async Task ServerDisconnectFirstTest()
         {
-            var client = new ClientSocketTransportLayer();
-            var server = new ServerSocketTransportLayer();
-            var clientErrors = new List<CommunicationErrorInfo>();
-            var serverErrors = new List<CommunicationErrorInfo>();
-            client.OnExceptionOccured += clientErrors.Add;
-            server.OnExceptionOccured += serverErrors.Add;
+            using var clientContainer = new ClientTestContainer();
+            using var serverContainer = new ServerTestContainer();
 
-            try
-            {
-                await server.StartAsync(TestConfiguration.ServerIp, TestConfiguration.ServerPort);
-                await client.ConnectAsync(TestConfiguration.ServerIp, TestConfiguration.ServerPort);
-                await Task.Delay(1000);
-                await server.StopAsync();
-                await Task.Delay(1000);
-                await client.DisconnectAsync();
-            }
-            finally
-            {
-                client.OnExceptionOccured -= clientErrors.Add;
-                server.OnExceptionOccured -= serverErrors.Add;
-            }
+            await serverContainer.Server.StartAsync(TestConfiguration.ServerIp, TestConfiguration.ServerPort);
+            await clientContainer.Client.ConnectAsync(TestConfiguration.ServerIp, TestConfiguration.ServerPort);
+            await Task.Delay(TestConfiguration.Delay);
+            await serverContainer.Server.StopAsync();
+            await Task.Delay(TestConfiguration.Delay);
+            await clientContainer.Client.DisconnectAsync();
 
-            Assert.AreEqual(0, clientErrors.Count);
-            Assert.AreEqual(0, serverErrors.Count);
+            Assert.AreEqual(0, clientContainer.Errors.Count);
+            Assert.AreEqual(0, serverContainer.Errors.Count);
         }
 
         [TestMethod]
         public async Task ClientDisconnectFirstTest()
         {
-            var client = new ClientSocketTransportLayer();
-            var server = new ServerSocketTransportLayer();
-            var clientErrors = new List<CommunicationErrorInfo>();
-            var serverErrors = new List<CommunicationErrorInfo>();
-            client.OnExceptionOccured += clientErrors.Add;
-            server.OnExceptionOccured += serverErrors.Add;
+            using var clientContainer = new ClientTestContainer();
+            using var serverContainer = new ServerTestContainer();
 
-            try
-            {
-                await server.StartAsync(TestConfiguration.ServerIp, TestConfiguration.ServerPort);
-                await client.ConnectAsync(TestConfiguration.ServerIp, TestConfiguration.ServerPort);
-                await Task.Delay(1000);
-                await client.DisconnectAsync();
-                await Task.Delay(1000);
-                await server.StopAsync();
-            }
-            finally
-            {
-                client.OnExceptionOccured -= clientErrors.Add;
-                server.OnExceptionOccured -= serverErrors.Add;
-            }
+            await serverContainer.Server.StartAsync(TestConfiguration.ServerIp, TestConfiguration.ServerPort);
+            await clientContainer.Client.ConnectAsync(TestConfiguration.ServerIp, TestConfiguration.ServerPort);
+            await Task.Delay(TestConfiguration.Delay);
+            await clientContainer.Client.DisconnectAsync();
+            await Task.Delay(TestConfiguration.Delay);
+            await serverContainer.Server.StopAsync();
 
-            Assert.AreEqual(0, clientErrors.Count);
-            Assert.AreEqual(0, serverErrors.Count);
+            Assert.AreEqual(0, clientContainer.Errors.Count);
+            Assert.AreEqual(0, serverContainer.Errors.Count);
         }
     }
 }
