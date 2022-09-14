@@ -6,12 +6,12 @@ using System;
 namespace GenericRpc.UnitTests
 {
     [TestClass]
-    public class ReflectionTests
+    public class ProxyGenerationTests
     {
         [TestMethod]
         public void Test()
         {
-            IMediator mediator = new TestMediator();
+            IMediator mediator = new MediatorWithException();
             var clientContext = new ClientContext(Guid.NewGuid());
             var proxyType = ProxyGenerator.GenerateProxyType(typeof(IExampleService));
             var generatedInstance = (IExampleService)ProxyGenerator.ActivateProxyInstance(proxyType, mediator, clientContext);
@@ -23,7 +23,7 @@ namespace GenericRpc.UnitTests
             Assert.ThrowsException<MediatorOkException>(() => generatedInstance.Apply());
         }
 
-        private class TestMediator : IMediator
+        private class MediatorWithException : IMediator
         {
             public object Execute(ClientContext clientContext, string serviceName, string methodName, params object[] arguments)
             {

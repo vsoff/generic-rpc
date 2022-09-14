@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace GenericRpc.Transport
+namespace GenericRpc
 {
     public abstract class ProxyService
     {
@@ -16,6 +16,6 @@ namespace GenericRpc.Transport
         }
 
         protected object Execute(string serviceName, string methodName, params object[] arguments)
-            =>  _mediator.Execute(_clientContext, serviceName, methodName, arguments);
+            => _mediator.Execute(_clientContext, serviceName, methodName, arguments);
     }
 }

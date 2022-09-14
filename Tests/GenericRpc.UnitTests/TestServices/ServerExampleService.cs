@@ -2,7 +2,7 @@
 
 namespace GenericRpc.UnitTests.TestServices
 {
-    public class ServerExampleService : IExampleService
+    internal class ServerExampleService : IExampleService
     {
         private readonly ClientContext _context;
 

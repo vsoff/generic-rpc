@@ -1,4 +1,4 @@
-﻿using GenericRpc.Transport;
+﻿using GenericRpc.Exceptions;
 using System;
 using System.Linq;
 using System.Reflection;
@@ -8,16 +8,18 @@ namespace GenericRpc.ServicesGeneration
 {
     internal static class ProxyGenerator
     {
+        private static object _assemblyInitLock = new object();
+        private static ModuleBuilder _moduleBuilder;
+
         public static object ActivateProxyInstance(Type proxyType, IMediator mediator, ClientContext context)
             => Activator.CreateInstance(proxyType, new object[] { mediator, context });
 
         public static Type GenerateProxyType(Type interfaceType)
         {
+            if (!interfaceType.IsVisible) throw new GenericRpcException("Interface type should be public");
+
             // Generate module.
-            var generatedAssemblyName = $"{nameof(GenericRpc)}.Generated";
-            AssemblyName assemblyName = new AssemblyName(generatedAssemblyName);
-            AssemblyBuilder assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
-            ModuleBuilder moduleBuilder = assemblyBuilder.DefineDynamicModule(assemblyName.Name);
+            var moduleBuilder = GetOrCreateModule();
 
             // Generate type.
             var generatedTypeName = $"{interfaceType.Name.Substring(1)}_{Guid.NewGuid():N}";
@@ -85,9 +87,28 @@ namespace GenericRpc.ServicesGeneration
                 ilGenerator.Emit(OpCodes.Ret);
             }
 
-            // Generate type and return instance.
+            // Generate type and return.
             var generatedType = typeBuilder.CreateTypeInfo();
             return generatedType;
+        }
+
+        private static ModuleBuilder GetOrCreateModule()
+        {
+            if (_moduleBuilder == null)
+            {
+                lock (_assemblyInitLock)
+                {
+                    if (_moduleBuilder == null)
+                    {
+                        var generatedAssemblyName = $"{nameof(GenericRpc)}.Generated";
+                        AssemblyName assemblyName = new AssemblyName(generatedAssemblyName);
+                        AssemblyBuilder assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
+                        _moduleBuilder = assemblyBuilder.DefineDynamicModule(assemblyName.Name);
+                    }
+                }
+            }
+
+            return _moduleBuilder;
         }
     }
 }
