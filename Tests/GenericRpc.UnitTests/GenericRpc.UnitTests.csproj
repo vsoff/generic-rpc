@@ -16,8 +16,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\GenericRpc.SocketTransport\GenericRpc.SocketTransport.csproj" />
-    <ProjectReference Include="..\GenericRpc\GenericRpc.csproj" />
+    <ProjectReference Include="..\..\GenericRpc.SocketTransport\GenericRpc.SocketTransport.csproj" />
+    <ProjectReference Include="..\..\GenericRpc\GenericRpc.csproj" />
   </ItemGroup>
 
 </Project>
