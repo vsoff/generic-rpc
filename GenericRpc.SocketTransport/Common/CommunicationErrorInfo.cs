@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace GenericRpc.SocketTransport
+namespace GenericRpc.SocketTransport.Common
 {
     public sealed class CommunicationErrorInfo
     {

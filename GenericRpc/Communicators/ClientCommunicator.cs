@@ -1,8 +1,9 @@
-﻿using GenericRpc.Transport;
+﻿using GenericRpc.ServicesGeneration;
+using GenericRpc.Transport;
 using System;
 using System.Threading.Tasks;
 
-namespace GenericRpc
+namespace GenericRpc.Communicators
 {
     public interface IClientCommunicator
     {

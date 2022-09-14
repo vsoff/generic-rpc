@@ -1,4 +1,5 @@
-﻿using GenericRpc.Transport;
+﻿using GenericRpc.SocketTransport.Common;
+using GenericRpc.Transport;
 using System;
 using System.Collections.Concurrent;
 using System.Net;

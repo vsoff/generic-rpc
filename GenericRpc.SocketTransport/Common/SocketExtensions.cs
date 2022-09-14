@@ -6,9 +6,9 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 
-namespace GenericRpc.SocketTransport
+namespace GenericRpc.SocketTransport.Common
 {
-    public static class SocketHelper
+    public static class SocketExtensions
     {
         private const int DefaultBufferSize = 256;
 
@@ -21,7 +21,7 @@ namespace GenericRpc.SocketTransport
                 if (!socket.Connected)
                     return false;
 
-                await SendMessageAsync(socket, message);
+                await socket.SendMessageAsync(message);
                 return true;
             }
             catch

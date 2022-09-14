@@ -4,7 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace GenericRpc
+namespace GenericRpc.ServicesGeneration
 {
     internal class ServicesContainerRoot
     {

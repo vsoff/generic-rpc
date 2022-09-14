@@ -1,4 +1,6 @@
-﻿namespace GenericRpc.SocketTransport
+﻿using GenericRpc.SocketTransport.Common;
+
+namespace GenericRpc.SocketTransport
 {
     public abstract class BaseSocketTransportLayer
     {

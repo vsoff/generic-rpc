@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace GenericRpc
+namespace GenericRpc.ServicesGeneration
 {
     public interface IListenerDependencyResolver
     {

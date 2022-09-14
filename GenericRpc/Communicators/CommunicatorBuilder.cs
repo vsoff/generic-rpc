@@ -1,10 +1,11 @@
 ﻿using GenericRpc.Exceptions;
 using GenericRpc.Serialization;
+using GenericRpc.ServicesGeneration;
 using GenericRpc.Transport;
 using System;
 using System.Collections.Generic;
 
-namespace GenericRpc
+namespace GenericRpc.Communicators
 {
     public sealed class CommunicatorBuilder
     {
@@ -18,24 +19,30 @@ namespace GenericRpc
 
         public CommunicatorBuilder SetSerializer(ICommunicatorSerializer serializer)
         {
+            if (_serializer != null) throw new GenericRpcException("Serializer already setted");
             _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
             return this;
         }
 
         public CommunicatorBuilder SetDependencyResolver(IListenerDependencyResolver dependencyResolver)
         {
+            if (_dependencyResolver != null) throw new GenericRpcException("Dependency resolver already setted");
             _dependencyResolver = dependencyResolver ?? throw new ArgumentNullException(nameof(dependencyResolver));
             return this;
         }
 
         public CommunicatorBuilder SetServerTransportLayer(IServerTransportLayer serverTransportLayer)
         {
+            if (_serverTransportLayer != null) throw new GenericRpcException("Server transport layer already setted");
+            if (_clientTransportLayer != null) throw new GenericRpcException("Client transport layer already setted");
             _serverTransportLayer = serverTransportLayer ?? throw new ArgumentNullException(nameof(serverTransportLayer));
             return this;
         }
 
         public CommunicatorBuilder SetClientTransportLayer(IClientTransportLayer clientTransportLayer)
         {
+            if (_serverTransportLayer != null) throw new GenericRpcException("Server transport layer already setted");
+            if (_clientTransportLayer != null) throw new GenericRpcException("Client transport layer already setted");
             _clientTransportLayer = clientTransportLayer ?? throw new ArgumentNullException(nameof(clientTransportLayer));
             return this;
         }
@@ -46,7 +53,7 @@ namespace GenericRpc
                 throw new GenericRpcException($"Type `{nameof(TServiceInterface)}` isn't an interface");
 
             if (_proxyServiceTypes.Contains(typeof(TServiceInterface)))
-                throw new GenericRpcException($"Type `{nameof(TServiceInterface)}` already registered as proxy service");
+                throw new GenericRpcException($"Proxy for interface `{nameof(TServiceInterface)}` already registered");
 
             _proxyServiceTypes.Add(typeof(TServiceInterface));
             return this;
@@ -94,12 +101,12 @@ namespace GenericRpc
             var servicesTypeInfos = new List<ServiceTypesInfo>();
 
             foreach (var typesPair in _listenServiceTypeByInterface)
-            { 
+            {
                 servicesTypeInfos.Add(new ServiceTypesInfo(typesPair.Key, typesPair.Value, false));
             }
 
-            foreach (var proxyInterfaceType in _proxyServiceTypes) 
-            { 
+            foreach (var proxyInterfaceType in _proxyServiceTypes)
+            {
                 var proxyRealizationType = ProxyGenerator.GenerateProxyType(proxyInterfaceType);
                 servicesTypeInfos.Add(new ServiceTypesInfo(proxyInterfaceType, proxyRealizationType, true));
             }

@@ -1,4 +1,6 @@
+using GenericRpc.Communicators;
 using GenericRpc.Serialization;
+using GenericRpc.ServicesGeneration;
 using GenericRpc.SocketTransport;
 using GenericRpc.UnitTests.TestServices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;

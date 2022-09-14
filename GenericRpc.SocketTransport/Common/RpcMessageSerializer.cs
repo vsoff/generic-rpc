@@ -2,7 +2,7 @@
 using System;
 using System.IO;
 
-namespace GenericRpc.SocketTransport
+namespace GenericRpc.SocketTransport.Common
 {
     public static class RpcMessageSerializer
     {
@@ -30,7 +30,6 @@ namespace GenericRpc.SocketTransport
                 return data;
             }
         }
-
 
         public static RpcMessage Read(BinaryReader reader)
         {
