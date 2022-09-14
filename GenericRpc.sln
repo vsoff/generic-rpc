@@ -11,6 +11,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{C1090BD2
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GenericRpc.UnitTests", "Tests\GenericRpc.UnitTests\GenericRpc.UnitTests.csproj", "{C1B0F355-A47C-418D-BF01-75BE991463B5}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GenericRpc.SocketTransport.UnitTests", "Tests\GenericRpc.SocketTransport.UnitTests\GenericRpc.SocketTransport.UnitTests.csproj", "{D32664E1-7BB4-499A-8344-CCECED76A725}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -29,12 +31,17 @@ Global
 		{C1B0F355-A47C-418D-BF01-75BE991463B5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C1B0F355-A47C-418D-BF01-75BE991463B5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C1B0F355-A47C-418D-BF01-75BE991463B5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D32664E1-7BB4-499A-8344-CCECED76A725}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D32664E1-7BB4-499A-8344-CCECED76A725}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D32664E1-7BB4-499A-8344-CCECED76A725}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D32664E1-7BB4-499A-8344-CCECED76A725}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{C1B0F355-A47C-418D-BF01-75BE991463B5} = {C1090BD2-2D30-4DA1-A1DC-770D803B7445}
+		{D32664E1-7BB4-499A-8344-CCECED76A725} = {C1090BD2-2D30-4DA1-A1DC-770D803B7445}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {BCF2B49D-8F8D-4DFB-8671-8F5E00F085D2}

@@ -1,4 +1,5 @@
-﻿using GenericRpc.Transport;
+﻿using GenericRpc.Exceptions;
+using GenericRpc.Transport;
 using System;
 using System.IO;
 
@@ -13,7 +14,7 @@ namespace GenericRpc.SocketTransport.Common
             {
                 var source = Read(reader);
                 if (stream.Position != stream.Length)
-                    throw new GenericRpcSocketTransportException($"Data not fully readed from stream. Position: {stream.Position}, Length: {stream.Length}");
+                    throw new GenericRpcSerializationException($"Data not fully readed from stream. Position: {stream.Position}, Length: {stream.Length}");
 
                 return source;
             }
@@ -66,7 +67,7 @@ namespace GenericRpc.SocketTransport.Common
                         }
                         break;
                     }
-                default: throw new GenericRpcSocketTransportException($"Unexpected type of {nameof(RpcMessageType)}");
+                default: throw new GenericRpcSerializationException($"Unexpected type of {nameof(RpcMessageType)}");
             }
 
             return new RpcMessage(serviceName, methodName, messageId, messageType, requestData, resoponseData);
@@ -102,7 +103,7 @@ namespace GenericRpc.SocketTransport.Common
                         }
                         break;
                     }
-                default: throw new GenericRpcSocketTransportException($"Unexpected type of {nameof(RpcMessageType)}");
+                default: throw new GenericRpcSerializationException($"Unexpected type of {nameof(RpcMessageType)}");
             }
         }
     }

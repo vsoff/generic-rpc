@@ -5,7 +5,9 @@ namespace GenericRpc.SocketTransport
     public abstract class BaseSocketTransportLayer
     {
         private readonly object _startLock = new();
+        private readonly object _stopLock = new();
         private bool _isAlive = false;
+        private bool _isStopping = false;
 
         protected void SetAliveOrThrow()
         {
@@ -31,6 +33,25 @@ namespace GenericRpc.SocketTransport
             lock (_startLock)
             {
                 return _isAlive;
+            }
+        }
+
+        protected void SetStoppingOrThrow()
+        {
+            lock (_stopLock)
+            {
+                if (_isStopping)
+                    throw new GenericRpcSocketTransportException("Socket already stopping");
+
+                _isStopping = true;
+            }
+        }
+
+        protected void ResetStopping()
+        {
+            lock (_stopLock)
+            {
+                _isStopping = false;
             }
         }
     }

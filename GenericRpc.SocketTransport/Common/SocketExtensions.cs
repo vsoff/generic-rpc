@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace GenericRpc.SocketTransport.Common
@@ -51,63 +53,66 @@ namespace GenericRpc.SocketTransport.Common
             await socket.SendAsync(new ArraySegment<byte>(fullResponse), SocketFlags.None);
         }
 
-        public static async IAsyncEnumerable<RpcMessage> StartReceiveMessagesAsync(this Socket socket)
+        public static async IAsyncEnumerable<RpcMessage> StartReceiveMessagesAsync(
+            this Socket socket,
+            [EnumeratorCancellation] CancellationToken cancellationToken)
         {
             byte[] unreadedBytes = new byte[0];
             while (socket.Connected)
             {
-                using (var stream = new MemoryStream())
+                cancellationToken.ThrowIfCancellationRequested();
+
+                using var stream = new MemoryStream();
+                using var writer = new BinaryWriter(stream);
+                using var reader = new BinaryReader(stream);
+
+                // Revert unreaded bytes.
+                stream.Write(unreadedBytes, 0, unreadedBytes.Length);
+
+                // Read all data from socket and write to stream.
+                ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[DefaultBufferSize]);
+                do
                 {
-                    //byte[] packageBytes;
-                    using (BinaryWriter writer = new BinaryWriter(stream))
-                    using (BinaryReader reader = new BinaryReader(stream))
+                    var dataLength = await socket.ReceiveAsync(buffer, SocketFlags.None);
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    if (dataLength == DefaultBufferSize) writer.Write(buffer.ToArray());
+                    else writer.Write(buffer.ToArray(), 0, dataLength);
+                } while (socket.Available > 0);
+
+                // Reset position for reading.
+                stream.Position = 0;
+
+                // Read all messages one by one.
+                while (true)
+                {
+                    // Check is data fully readed.
+                    var unreadedLength = stream.Length - stream.Position;
+                    if (unreadedLength == 0)
                     {
-                        // Revert unreaded bytes.
-                        stream.Write(unreadedBytes, 0, unreadedBytes.Length);
+                        break;
+                    }
 
-                        // Read all data from socket and write to stream.
-                        ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[DefaultBufferSize]);
-                        do
-                        {
-                            var dataLength = await socket.ReceiveAsync(buffer, SocketFlags.None);
+                    // Check is package fully readed.
+                    var packageLength = reader.ReadInt32();
+                    if (unreadedLength >= packageLength)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
 
-                            if (dataLength == DefaultBufferSize) writer.Write(buffer.ToArray());
-                            else writer.Write(buffer.ToArray(), 0, dataLength);
-                        } while (socket.Available > 0);
-
-                        // Reset position for reading.
-                        stream.Position = 0;
-
-                        // Read all messages one by one.
-                        while (true)
-                        {
-                            // Check is data fully readed.
-                            var unreadedLength = stream.Length - stream.Position;
-                            if (unreadedLength == 0)
-                            {
-                                break;
-                            }
-
-                            // Check is package fully readed.
-                            var packageLength = reader.ReadInt32();
-                            if (unreadedLength >= packageLength)
-                            {
-                                var packageMessage = RpcMessageSerializer.Read(reader);
-                                yield return packageMessage;
-                            }
-                            else
-                            {
-                                // Revert package length position.
-                                const int packageLengthBytes = 4;
-                                stream.Position -= packageLengthBytes;
-                                break;
-                            }
-                        }
-
-                        // Save unreaded bytes.
-                        unreadedBytes = ReadUnreadedBytes(stream);
+                        var packageMessage = RpcMessageSerializer.Read(reader);
+                        yield return packageMessage;
+                    }
+                    else
+                    {
+                        // Revert package length position.
+                        const int packageLengthBytes = 4;
+                        stream.Position -= packageLengthBytes;
+                        break;
                     }
                 }
+
+                // Save unreaded bytes.
+                unreadedBytes = ReadUnreadedBytes(stream);
             }
         }
 
@@ -119,6 +124,7 @@ namespace GenericRpc.SocketTransport.Common
             var unreadedBytes = new byte[stream.Length - stream.Position];
             if (unreadedBytes.Length > 0)
                 stream.Read(unreadedBytes, 0, unreadedBytes.Length);
+
             return unreadedBytes;
         }
     }
