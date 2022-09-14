@@ -3,6 +3,7 @@ using GenericRpc.SocketTransport;
 using GenericRpc.Transport;
 using GenericRpc.UnitTests.TestServices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Collections.Generic;
 
 namespace GenericRpc.UnitTests
@@ -13,67 +14,26 @@ namespace GenericRpc.UnitTests
         [TestMethod]
         public void Test()
         {
-            var mediator = new Mediator();
+            IMediator mediator = new TestMediator();
+            var clientContext = new ClientContext(Guid.NewGuid());
+            var proxyType = ProxyGenerator.GenerateProxyType(typeof(IExampleService));
+            var generatedInstance = (IExampleService)ProxyGenerator.ActivateProxyInstance(proxyType, mediator, clientContext);
 
-            var generatedInstance = (IExampleService)ClassGenerator.GenerateSpeakerInstance(typeof(IExampleService), mediator);
-
-            try { generatedInstance.GetIndex(); }
-            catch { }
-
-            try { generatedInstance.ShowMessage("sda", "gg wp"); }
-            catch { }
-
-            try { var cc32 = generatedInstance.Sum(1, 2); }
-            catch { }
-
-            try { generatedInstance.Concat("sda", "gg wp"); }
-            catch { }
-
-            try { generatedInstance.Apply(); }
-            catch { }
-
+            Assert.ThrowsException<MediatorOkException>(() => generatedInstance.GetIndex());
+            Assert.ThrowsException<MediatorOkException>(() => generatedInstance.ShowMessage("message text"));
+            Assert.ThrowsException<MediatorOkException>(() => generatedInstance.Sum(1337, 4663));
+            Assert.ThrowsException<MediatorOkException>(() => generatedInstance.Concat("test text 1", "test text 2"));
+            Assert.ThrowsException<MediatorOkException>(() => generatedInstance.Apply());
         }
 
-        private static object InvokeMethod<T>(T obj, string methodName, List<object> args)
+        private class TestMediator : IMediator
         {
-            return typeof(T).GetMethod(methodName).Invoke(obj, args.ToArray());
-        }
-
-        private class ClientService : SpeakerService, IExampleService
-        {
-            public ClientService(IMediator mediator) : base(mediator)
+            public object Execute(ClientContext clientContext, string serviceName, string methodName, params object[] arguments)
             {
-            }
-
-            public void ShowMessage(string message, string message2)
-            {
-                Execute(nameof(IExampleService), nameof(ShowMessage), message, message2);
-            }
-
-            public int Sum(int number1, int number2)
-            {
-                return (int)Execute(nameof(IExampleService), nameof(ShowMessage), number1, number2);
-            }
-
-            public string Concat(string text1, string text2)
-            {
-                return (string)Execute(nameof(IExampleService), nameof(Concat), text1, text2);
-            }
-
-            public int GetIndex()
-            {
-                return (int)Execute(nameof(IExampleService), nameof(GetIndex));
-            }
-
-            public void Apply()
-            {
-                Execute(nameof(IExampleService), nameof(GetIndex));
+                throw new MediatorOkException();
             }
         }
 
-        public interface IA
-        {
-
-        }
+        private class MediatorOkException : Exception {}
     }
 }

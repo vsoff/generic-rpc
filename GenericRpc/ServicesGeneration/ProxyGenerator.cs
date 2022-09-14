@@ -6,9 +6,12 @@ using System.Reflection.Emit;
 
 namespace GenericRpc
 {
-    internal static class ClassGenerator
+    internal static class ProxyGenerator
     {
-        public static object GenerateSpeakerInstance(Type interfaceType, IMediator mediator)
+        public static object ActivateProxyInstance(Type proxyType, IMediator mediator, ClientContext context)
+            => Activator.CreateInstance(proxyType, new object[] { mediator, context });
+
+        public static Type GenerateProxyType(Type interfaceType)
         {
             // Generate module.
             var generatedAssemblyName = $"{nameof(GenericRpc)}.Generated";
@@ -18,16 +21,17 @@ namespace GenericRpc
 
             // Generate type.
             var generatedTypeName = $"{interfaceType.Name.Substring(1)}_{Guid.NewGuid():N}";
-            var typeBuilder = moduleBuilder.DefineType(generatedTypeName, TypeAttributes.Public | TypeAttributes.Class, typeof(SpeakerService));
+            var typeBuilder = moduleBuilder.DefineType(generatedTypeName, TypeAttributes.Public | TypeAttributes.Class, typeof(ProxyService));
             typeBuilder.AddInterfaceImplementation(interfaceType);
 
             // Generate constructor.
-            var ctrArgumentsTypes = new Type[] { typeof(IMediator) };
+            var ctrArgumentsTypes = new Type[] { typeof(IMediator), typeof(ClientContext) };
             var ctrBuilder = typeBuilder.DefineConstructor(MethodAttributes.Public, CallingConventions.HasThis, ctrArgumentsTypes);
             var ctrIlGenerator = ctrBuilder.GetILGenerator();
             ctrIlGenerator.Emit(OpCodes.Ldarg_0);
             ctrIlGenerator.Emit(OpCodes.Ldarg_1);
-            var baseConstructor = typeof(SpeakerService).GetConstructor(ctrArgumentsTypes);
+            ctrIlGenerator.Emit(OpCodes.Ldarg_2);
+            var baseConstructor = typeof(ProxyService).GetConstructor(ctrArgumentsTypes);
             ctrIlGenerator.Emit(OpCodes.Callvirt, baseConstructor);
             ctrIlGenerator.Emit(OpCodes.Nop);
             ctrIlGenerator.Emit(OpCodes.Nop);
@@ -62,7 +66,7 @@ namespace GenericRpc
                     ilGenerator.Emit(OpCodes.Stelem_Ref);
                 }
 
-                var executeMethod = typeof(SpeakerService).GetMethod(SpeakerService.ExecuteMethodName, BindingFlags.Instance | BindingFlags.NonPublic);
+                var executeMethod = typeof(ProxyService).GetMethod(ProxyService.ExecuteMethodName, BindingFlags.Instance | BindingFlags.NonPublic);
                 ilGenerator.Emit(OpCodes.Callvirt, executeMethod);
 
                 if (method.ReturnType == typeof(void))
@@ -83,7 +87,7 @@ namespace GenericRpc
 
             // Generate type and return instance.
             var generatedType = typeBuilder.CreateTypeInfo();
-            return Activator.CreateInstance(generatedType, new object[] { mediator });
+            return generatedType;
         }
     }
 }

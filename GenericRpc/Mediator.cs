@@ -11,42 +11,62 @@ namespace GenericRpc
 {
     public interface IMediator
     {
-        object Execute(string serviceName, string methodName, params object[] arguments);
+        object Execute(ClientContext clientContext, string serviceName, string methodName, params object[] arguments);
     }
 
     internal class Mediator : IMediator
     {
         private readonly ConcurrentDictionary<Guid, ResponseAwaiter> _awaiterByMessageId = new ConcurrentDictionary<Guid, ResponseAwaiter>();
+        private readonly bool _isServer;
 
         private readonly ICommunicatorSerializer _serializer;
-        private readonly ITransportLayer _transportLayer;
+        private readonly IClientTransportLayer _clientTransportLayer;
+        private readonly IServerTransportLayer _serverTransportLayer;
 
-        private ServicesContainer _servicesContainer;
+        private ServicesContainerRoot _servicesContainer;
 
         public Mediator(
             ICommunicatorSerializer serializer,
-            ITransportLayer transportLayer)
+            IClientTransportLayer clientTransportLayer)
         {
             _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
-            _transportLayer = transportLayer ?? throw new ArgumentNullException(nameof(transportLayer));
+            _clientTransportLayer = clientTransportLayer ?? throw new ArgumentNullException(nameof(clientTransportLayer));
 
-            transportLayer.OnReceiveMessage += OnReceiveMessage;
+            // TODO: Unsubscribe.
+            clientTransportLayer.OnReceiveMessage += OnReceiveMessage_Client;
         }
 
-        public void SetServicesContainer(ServicesContainer servicesContainer)
+        public Mediator(
+            ICommunicatorSerializer serializer,
+            IServerTransportLayer serverTransportLayer)
+        {
+            _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
+            _serverTransportLayer = serverTransportLayer ?? throw new ArgumentNullException(nameof(serverTransportLayer));
+
+            _isServer = true;
+            // TODO: Unsubscribe.
+            serverTransportLayer.OnReceiveMessage += OnReceiveMessage_Server;
+            serverTransportLayer.OnClientConnected += OnClientConnected_Server;
+            serverTransportLayer.OnClientDisconnected += OnClientDisconnected_Server;
+        }
+
+        public void SetServicesContainer(ServicesContainerRoot servicesContainer)
         {
             _servicesContainer = servicesContainer ?? throw new ArgumentNullException(nameof(servicesContainer));
         }
 
-        public object Execute(string serviceName, string methodName, params object[] arguments)
+        public object Execute(ClientContext clientContext, string serviceName, string methodName, params object[] arguments)
         {
+            if (_isServer && clientContext == null) throw new ArgumentNullException(nameof(clientContext));
+
             // Get service and method information.
             var servicInterfaceType = _servicesContainer.GetServiceInterfaceType(serviceName);
             var serviceMethod = servicInterfaceType.GetMethod(methodName);
             if (serviceMethod == null)
                 throw new GenericRpcException($"Method with name {methodName} not found");
 
-            var argumentTypes = serviceMethod.GetGenericArguments();
+            // TODO: We don't need in recounting parameters per each call.
+            var argumentTypes = serviceMethod.GetParameters().Select(x => x.ParameterType).ToArray();
 
             // TODO: In service can be many methods with the same name and arguments count.
             // Serialize arguments.
@@ -55,7 +75,7 @@ namespace GenericRpc
 
             var argumentsBytes = new List<byte[]>(argumentTypes.Length);
             for (int i = 0; i < argumentTypes.Length; i++)
-                argumentsBytes[i] = _serializer.Serialize(arguments[i], argumentTypes[i]);
+                argumentsBytes.Add(_serializer.Serialize(arguments[i], argumentTypes[i]));
 
             // Configure awaiter and send message.
             var messageId = Guid.NewGuid();
@@ -63,8 +83,16 @@ namespace GenericRpc
             if (!_awaiterByMessageId.TryAdd(messageId, awaiter))
                 throw new GenericRpcException($"Message with Id={messageId} already exists");
 
-            var requestMessage = new RpcMessage(serviceName, methodName, Guid.NewGuid(), RpcMessageType.Request, argumentsBytes.ToArray(), null);
-            _transportLayer.SendMessageAsync(requestMessage).GetAwaiter().GetResult();
+            var requestMessage = new RpcMessage(serviceName, methodName, messageId, RpcMessageType.Request, argumentsBytes.ToArray(), null);
+            if (_isServer)
+            {
+                _serverTransportLayer.SendMessageAsync(requestMessage, clientContext).GetAwaiter().GetResult();
+            }
+            else
+            {
+                _clientTransportLayer.SendMessageAsync(requestMessage).GetAwaiter().GetResult();
+            }
+
             var response = awaiter.GetResponse();
             _awaiterByMessageId.TryRemove(messageId, out _);
 
@@ -74,9 +102,24 @@ namespace GenericRpc
             return resultData;
         }
 
-        private async void OnReceiveMessage(RpcMessage message, Guid? clientId)
+        private void OnClientConnected_Server(ClientContext clientContext)
+        {
+            _servicesContainer.RegisterServicesForClientContext(clientContext);
+        }
+
+        private void OnClientDisconnected_Server(ClientContext clientContext)
+        {
+            _servicesContainer.UnregisterServicesForClientContext(clientContext);
+        }
+
+        private void OnReceiveMessage_Client(RpcMessage message) => OnReceiveMessage(message, null);
+
+        private void OnReceiveMessage_Server(RpcMessage message, ClientContext clientContext) => OnReceiveMessage(message, clientContext);
+
+        private void OnReceiveMessage(RpcMessage message, ClientContext clientContext)
         {
             if (message == null) throw new ArgumentNullException(nameof(message));
+            if (_isServer && clientContext == null) throw new ArgumentNullException(nameof(clientContext));
 
             switch (message.MessageType)
             {
@@ -87,7 +130,8 @@ namespace GenericRpc
                     if (serviceMethod == null)
                         throw new GenericRpcException($"Method with name {message.MethodName} not found");
 
-                    var argumentTypes = serviceMethod.GetGenericArguments();
+                    // TODO: We don't need in recounting parameters per each call.
+                    var argumentTypes = serviceMethod.GetParameters().Select(x => x.ParameterType).ToArray();
 
                     // TODO: In service can be many methods with the same name and arguments count.
                     // Deserialize arguments.
@@ -99,10 +143,20 @@ namespace GenericRpc
                         arguments[i] = _serializer.Deserialize(message.RequestData[i], argumentTypes[i]);
 
                     // Invoke method and send result.
-                    var service = _servicesContainer.GetListenerService(servicInterfaceType);
+                    var service = _isServer
+                        ? _servicesContainer.GetServicesContainer(clientContext).GetListenerService(servicInterfaceType)
+                        : _servicesContainer.ClientContainer.GetListenerService(servicInterfaceType);
                     var result = serviceMethod.Invoke(service, arguments);
                     var resultData = result == null ? null : _serializer.Serialize(result, serviceMethod.ReturnType);
-                    await _transportLayer.SendMessageAsync(new RpcMessage(message.ServiceName, message.MethodName, message.MessageId, RpcMessageType.Response, null, resultData), clientId);
+
+                    var responseMessage = new RpcMessage(message.ServiceName, message.MethodName, message.MessageId, RpcMessageType.Response, null, resultData);
+                    if (_isServer)
+                    {
+                        _serverTransportLayer.SendMessageAsync(responseMessage, clientContext);
+                    } else
+                    {
+                        _clientTransportLayer.SendMessageAsync(responseMessage);
+                    }
                     break;
                 case RpcMessageType.Response:
                     if (_awaiterByMessageId.TryGetValue(message.MessageId, out var awaiter))
@@ -126,16 +180,16 @@ namespace GenericRpc
 
             public ResponseAwaiter()
             {
-                _resetEvent = new ManualResetEvent(true);
+                _resetEvent = new ManualResetEvent(false);
             }
 
             public void SetResponse(RpcMessage message)
             {
                 if (message == null) throw new ArgumentNullException(nameof(message));
-                if (_message == null) throw new GenericRpcException($"Message already setted");
+                if (_message != null) throw new GenericRpcException($"Message already setted");
 
                 _message = message;
-                _resetEvent.Reset();
+                _resetEvent.Set();
             }
 
             public RpcMessage GetResponse()
@@ -144,68 +198,5 @@ namespace GenericRpc
                 return _message;
             }
         }
-    }
-
-    internal class ServicesContainer
-    {
-        private readonly IReadOnlyDictionary<Type, object> _speakerServiceByInterface;
-        private readonly IReadOnlyDictionary<Type, object> _listenerServiceByInterface;
-        private readonly IReadOnlyDictionary<string, Type> _serviceInterfaceTypeByTypeName;
-
-        public ServicesContainer(
-            IReadOnlyDictionary<Type, object> speakerServiceByInterface,
-            IReadOnlyDictionary<Type, object> listenerServiceByInterface)
-        {
-            _speakerServiceByInterface = speakerServiceByInterface ?? throw new ArgumentNullException(nameof(speakerServiceByInterface));
-            _listenerServiceByInterface = listenerServiceByInterface ?? throw new ArgumentNullException(nameof(listenerServiceByInterface));
-            _serviceInterfaceTypeByTypeName = listenerServiceByInterface.Keys.ToDictionary(x => x.Name, x => x);
-        }
-
-        public object GetSpeakerService(Type type)
-        {
-            if (!type.IsInterface)
-                throw new GenericRpcException($"Type `{type.FullName}` isn't an interface");
-
-            if (!_speakerServiceByInterface.TryGetValue(type, out var service))
-                throw new GenericRpcException($"Speaker service with interface `{type.FullName}` isn't found");
-
-            return service;
-        }
-
-        public object GetListenerService(Type type)
-        {
-            if (!type.IsInterface)
-                throw new GenericRpcException($"Type `{type.FullName}` isn't an interface");
-
-            if (!_listenerServiceByInterface.TryGetValue(type, out var service))
-                throw new GenericRpcException($"Listener service with interface `{type.FullName}` isn't found");
-
-            return service;
-        }
-
-        public Type GetServiceInterfaceType(string interfaceTypeName)
-        {
-            if (!_serviceInterfaceTypeByTypeName.TryGetValue(interfaceTypeName, out var serviceType))
-                throw new GenericRpcException($"Type with name `{interfaceTypeName}` isn't registered");
-
-            return serviceType;
-        }
-    }
-
-    public sealed class Communicator
-    {
-        private readonly ServicesContainer _servicesContainer;
-        private readonly IMediator _mediator;
-
-        internal Communicator(
-            ServicesContainer servicesContainer,
-            IMediator mediator)
-        {
-            _servicesContainer = servicesContainer ?? throw new ArgumentException(nameof(servicesContainer));
-            _mediator = mediator ?? throw new ArgumentException(nameof(mediator));
-        }
-
-        public TServiceInterface GetSpeakerService<TServiceInterface>()
-            => (TServiceInterface)_servicesContainer.GetSpeakerService(typeof(TServiceInterface));
     }
 }

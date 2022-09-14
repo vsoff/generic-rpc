@@ -4,22 +4,20 @@ namespace GenericRpc.UnitTests.TestServices
 {
     public class ServerExampleService : IExampleService
     {
-        public void Apply()
+        private readonly ClientContext _context;
+
+        public ServerExampleService(ClientContext context)
         {
-            throw new System.NotImplementedException();
+            _context = context;
         }
 
-        public string Concat(string text1, string text2)
-        {
-            throw new System.NotImplementedException();
-        }
+        public void Apply() => Debug.WriteLine("Applied");
 
-        public int GetIndex()
-        {
-            throw new System.NotImplementedException();
-        }
+        public string Concat(string text1, string text2) => string.Concat(text1, text2);
 
-        public void ShowMessage(string message, string message2) => Debug.WriteLine(message + message2);
+        public int GetIndex() => 4412;
+
+        public void ShowMessage(string message) => Debug.WriteLine(message);
 
         public int Sum(int number1, int number2) => number1 + number2;
     }

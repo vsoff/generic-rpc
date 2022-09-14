@@ -12,11 +12,11 @@
     <PackageReference Include="MSTest.TestFramework" Version="2.2.7" />
     <PackageReference Include="coverlet.collector" Version="3.1.0" />
     <PackageReference Include="System.Reflection.Emit" Version="4.7.0" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="6.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\GenericRpc.SocketTransport\GenericRpc.SocketTransport.csproj" />
-    <ProjectReference Include="..\GenericRpc.Socket\GenericRpc.SocketTransport.csproj" />
     <ProjectReference Include="..\GenericRpc\GenericRpc.csproj" />
   </ItemGroup>
 
