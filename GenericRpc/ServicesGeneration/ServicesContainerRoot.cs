@@ -1,4 +1,5 @@
 ﻿using GenericRpc.Exceptions;
+using GenericRpc.Mediators;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;

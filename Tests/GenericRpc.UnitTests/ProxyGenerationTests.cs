@@ -1,4 +1,5 @@
-﻿using GenericRpc.ServicesGeneration;
+﻿using GenericRpc.Mediators;
+using GenericRpc.ServicesGeneration;
 using GenericRpc.UnitTests.TestServices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;

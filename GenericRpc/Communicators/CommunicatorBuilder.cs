@@ -1,4 +1,5 @@
 ﻿using GenericRpc.Exceptions;
+using GenericRpc.Mediators;
 using GenericRpc.Serialization;
 using GenericRpc.ServicesGeneration;
 using GenericRpc.Transport;
@@ -77,7 +78,7 @@ namespace GenericRpc.Communicators
             if (_serializer == null) throw new GenericRpcException("Serializer not setted");
             if (_serverTransportLayer == null) throw new GenericRpcException("Server transport layer not setted");
 
-            var mediator = new Mediator(_serializer, _serverTransportLayer);
+            var mediator = new ServerMediator(_serverTransportLayer, _serializer);
             var serviceContainer = BuildServiceContainerRoot(mediator);
             mediator.SetServicesContainer(serviceContainer);
 
@@ -89,7 +90,7 @@ namespace GenericRpc.Communicators
             if (_serializer == null) throw new GenericRpcException("Serializer not setted");
             if (_clientTransportLayer == null) throw new GenericRpcException("Client transport layer not setted");
 
-            var mediator = new Mediator(_serializer, _clientTransportLayer);
+            var mediator = new ClientMediator(_clientTransportLayer, _serializer);
             var serviceContainer = BuildServiceContainerRoot(mediator);
             mediator.SetServicesContainer(serviceContainer);
 
