@@ -19,6 +19,18 @@ namespace GenericRpc.ServicesGeneration
         {
             if (!interfaceType.IsVisible) throw new GenericRpcException("Interface type should be public");
 
+            try
+            {
+                return GenerateProxyTypeInternal(interfaceType);
+            }
+            catch (Exception exception)
+            {
+                throw new GenericRpcException("Generating proxy service type error", exception);
+            }
+        }
+
+        private static Type GenerateProxyTypeInternal(Type interfaceType)
+        {
             // Generate module.
             var moduleBuilder = GetOrCreateModule();
 

@@ -9,12 +9,18 @@ namespace GenericRpc.SocketTransport
 {
     public class ClientSocketTransportLayer : BaseSocketTransportLayer, IClientTransportLayer
     {
-        public event MessageReceived OnReceiveMessage;
+        private MessageReceived _onMessageReceived;
 
         private CancellationTokenSource _clientCancellationTokenSource;
         private Socket _serverSocket;
 
         public event Action<CommunicationErrorInfo> OnExceptionOccured;
+
+        public void SetRecieveMessageCallback(MessageReceived onMessageReceived)
+        {
+            if (_onMessageReceived != null) throw new GenericRpcSocketTransportException("Message recieve callback already setted");
+            _onMessageReceived = onMessageReceived ?? throw new ArgumentNullException(nameof(onMessageReceived));
+        }
 
         public async Task SendMessageAsync(RpcMessage message)
         {
@@ -23,6 +29,8 @@ namespace GenericRpc.SocketTransport
 
         public async Task ConnectAsync(string host, int port)
         {
+            if (_onMessageReceived == null) throw new GenericRpcSocketTransportException("Message recieve callback not setted");
+
             SetAliveOrThrow();
 
             try
@@ -46,7 +54,7 @@ namespace GenericRpc.SocketTransport
             try
             {
                 await foreach (var clientMessage in _serverSocket.StartReceiveMessagesAsync(cancellationToken))
-                    OnReceiveMessage?.Invoke(clientMessage);
+                    _onMessageReceived?.Invoke(clientMessage);
             }
             catch (TaskCanceledException)
             {

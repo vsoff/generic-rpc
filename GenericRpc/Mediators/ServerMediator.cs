@@ -20,9 +20,9 @@ namespace GenericRpc.Mediators
             : base(serializer)
         {
             _serverTransportLayer = serverTransportLayer ?? throw new ArgumentNullException(nameof(serverTransportLayer));
-            serverTransportLayer.OnReceiveMessage += OnReceiveMessage;
-            serverTransportLayer.OnClientConnected += OnClientConnected_Server;
-            serverTransportLayer.OnClientDisconnected += OnClientDisconnected_Server;
+            serverTransportLayer.SetRecieveMessageCallback(OnReceiveMessage);
+            serverTransportLayer.SetClientConnectedCallback(OnClientConnected_Server);
+            serverTransportLayer.SetClientDisconnectedCallback(OnClientDisconnected_Server);
         }
 
         protected override object GetListenerService(ClientContext clientContext, Type serviceInterfaceType)

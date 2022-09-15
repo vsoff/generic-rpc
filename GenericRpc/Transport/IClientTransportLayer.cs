@@ -8,6 +8,6 @@ namespace GenericRpc.Transport
         Task DisconnectAsync();
 
         Task SendMessageAsync(RpcMessage message);
-        event MessageReceived OnReceiveMessage;
+        void SetRecieveMessageCallback(MessageReceived onMessageReceived);
     }
 }

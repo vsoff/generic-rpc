@@ -17,11 +17,29 @@ namespace GenericRpc.SocketTransport
         private CancellationTokenSource _serverCancellationTokenSource;
         private Socket _serverSocket;
 
-        public event ClientConnected OnClientConnected;
-        public event ClientDisconnected OnClientDisconnected;
-        public event MessageReceivedWithClientId OnReceiveMessage;
+        private ClientConnected _onClientConnected;
+        private ClientDisconnected _onClientDisconnected;
+        private MessageReceivedWithClientId _onMessageReceived;
 
         public event Action<CommunicationErrorInfo> OnExceptionOccured;
+
+        public void SetClientConnectedCallback(ClientConnected onClientConnected)
+        {
+            if (_onClientConnected != null) throw new GenericRpcSocketTransportException("Client connected callback already setted");
+            _onClientConnected = onClientConnected ?? throw new ArgumentNullException(nameof(onClientConnected));
+        }
+
+        public void SetClientDisconnectedCallback(ClientDisconnected onClientDisconnected)
+        {
+            if (_onClientDisconnected != null) throw new GenericRpcSocketTransportException("Client disconnected callback already setted");
+            _onClientDisconnected = onClientDisconnected ?? throw new ArgumentNullException(nameof(onClientDisconnected));
+        }
+
+        public void SetRecieveMessageCallback(MessageReceivedWithClientId onMessageReceived)
+        {
+            if (_onMessageReceived != null) throw new GenericRpcSocketTransportException("Receive message callback already setted");
+            _onMessageReceived = onMessageReceived ?? throw new ArgumentNullException(nameof(onMessageReceived));
+        }
 
         public async Task SendMessageAsync(RpcMessage message, ClientContext context)
         {
@@ -31,6 +49,10 @@ namespace GenericRpc.SocketTransport
 
         public async Task StartAsync(string host, int port)
         {
+            if (_onMessageReceived == null) throw new GenericRpcSocketTransportException("Message recieve callback not setted");
+            if (_onClientConnected == null) throw new GenericRpcSocketTransportException("Client connected callback not setted");
+            if (_onClientDisconnected == null) throw new GenericRpcSocketTransportException("Client disconnected callback not setted");
+
             var endpoint = new IPEndPoint(IPAddress.Parse(host), port);
             SetAliveOrThrow();
 
@@ -137,7 +159,7 @@ namespace GenericRpc.SocketTransport
                     if (!_socketByClientId.TryAdd(clientContext, clientSocket))
                         throw new GenericRpcSocketTransportException("Socket not added");
 
-                    OnClientConnected?.Invoke(clientContext);
+                    _onClientConnected.Invoke(clientContext);
                     await Task.Factory.StartNew(async () => await CommunicateWithClientAsync(clientContext, cancellationToken));
                 }
                 catch (TaskCanceledException)
@@ -164,7 +186,7 @@ namespace GenericRpc.SocketTransport
                 await foreach (var clientMessage in clientSocket.StartReceiveMessagesAsync(cancellationToken))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    OnReceiveMessage?.Invoke(clientMessage, context);
+                    _onMessageReceived.Invoke(clientMessage, context);
                 }
             }
             catch (TaskCanceledException)
@@ -189,7 +211,7 @@ namespace GenericRpc.SocketTransport
 
                 clientSocket?.Disconnect(false);
                 clientSocket?.Dispose();
-                OnClientDisconnected?.Invoke(context);
+                _onClientDisconnected.Invoke(context);
             }
             catch (Exception exception)
             {

@@ -19,7 +19,7 @@ namespace GenericRpc.Mediators
             : base(serializer)
         {
             _clientTransportLayer = clientTransportLayer ?? throw new ArgumentNullException(nameof(clientTransportLayer));
-            clientTransportLayer.OnReceiveMessage += OnReceiveMessage;
+            clientTransportLayer.SetRecieveMessageCallback(async (message) => await OnReceiveMessage(message, null));
         }
 
         protected override object GetListenerService(ClientContext clientContext, Type serviceInterfaceType)
@@ -49,7 +49,5 @@ namespace GenericRpc.Mediators
             if (_awaiterByMessageId.TryGetValue(responseMessage.MessageId, out var awaiter))
                 awaiter.SetResponse(responseMessage);
         }
-
-        private async Task OnReceiveMessage(RpcMessage message) => await OnReceiveMessage(message, null);
     }
 }

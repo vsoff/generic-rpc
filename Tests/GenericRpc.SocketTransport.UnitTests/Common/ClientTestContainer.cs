@@ -1,6 +1,7 @@
 ﻿using GenericRpc.SocketTransport.Common;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace GenericRpc.SocketTransport.UnitTests.Common
 {
@@ -15,6 +16,8 @@ namespace GenericRpc.SocketTransport.UnitTests.Common
             Client = new ClientSocketTransportLayer();
             _errors = new List<CommunicationErrorInfo>();
             Client.OnExceptionOccured += _errors.Add;
+
+            Client.SetRecieveMessageCallback((_) => Task.CompletedTask);
         }
 
         public void Dispose()

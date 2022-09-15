@@ -44,7 +44,7 @@ try
         var serverCancellactionTokenSource = new CancellationTokenSource();
         var tokensByContext = new ConcurrentDictionary<ClientContext, CancellationTokenSource>();
 
-        transportLayer.OnClientConnected += async (context) =>
+        transportLayer.SetClientConnectedCallback(async (context) =>
         {
             var service = serverCommunicator.GetProxy<IClientExampleService>(context);
             await Task.Factory.StartNew(async () =>
@@ -73,13 +73,13 @@ try
                     }
                 }
             });
-        };
+        });
 
-        transportLayer.OnClientDisconnected += (context) =>
+        transportLayer.SetClientDisconnectedCallback((context) =>
         {
             if (tokensByContext.TryRemove(context, out var source))
                 source.Cancel();
-        };
+        });
 
         Console.WriteLine("Press enter to stop server...");
         Console.ReadLine();

@@ -1,6 +1,7 @@
 ﻿using GenericRpc.SocketTransport.Common;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace GenericRpc.SocketTransport.UnitTests.Common
 {
@@ -15,6 +16,9 @@ namespace GenericRpc.SocketTransport.UnitTests.Common
             Server = new ServerSocketTransportLayer();
             _errors = new List<CommunicationErrorInfo>();
             Server.OnExceptionOccured += _errors.Add;
+            Server.SetRecieveMessageCallback((_, _) => Task.CompletedTask);
+            Server.SetClientDisconnectedCallback((_) => { });
+            Server.SetClientConnectedCallback((_) => { });
         }
 
         public void Dispose()
