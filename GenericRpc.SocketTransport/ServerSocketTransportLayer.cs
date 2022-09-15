@@ -23,6 +23,8 @@ namespace GenericRpc.SocketTransport
 
         public event Action<CommunicationErrorInfo> OnExceptionOccured;
 
+        public bool IsAlive => IsTransportAlive;
+
         public void SetClientConnectedCallback(ClientConnected onClientConnected)
         {
             if (_onClientConnected != null) throw new GenericRpcSocketTransportException("Client connected callback already setted");
@@ -96,10 +98,11 @@ namespace GenericRpc.SocketTransport
 
         public Task StopAsync()
         {
-            if (!IsAlive())
+            if (!IsTransportAlive)
                 return Task.CompletedTask;
 
-            SetStoppingOrThrow();
+            if (!LockForStop())
+                return Task.CompletedTask;
 
             try
             {
@@ -186,7 +189,7 @@ namespace GenericRpc.SocketTransport
                 await foreach (var clientMessage in clientSocket.StartReceiveMessagesAsync(cancellationToken))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    _onMessageReceived.Invoke(clientMessage, context);
+                    await _onMessageReceived.Invoke(clientMessage, context);
                 }
             }
             catch (TaskCanceledException)

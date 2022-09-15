@@ -4,6 +4,8 @@ namespace GenericRpc.Transport
 {
     public interface IClientTransportLayer
     {
+        bool IsAlive { get; }
+
         Task ConnectAsync(string host, int port);
         Task DisconnectAsync();
 

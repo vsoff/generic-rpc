@@ -16,6 +16,8 @@ namespace GenericRpc.SocketTransport
 
         public event Action<CommunicationErrorInfo> OnExceptionOccured;
 
+        public bool IsAlive => IsTransportAlive;
+
         public void SetRecieveMessageCallback(MessageReceived onMessageReceived)
         {
             if (_onMessageReceived != null) throw new GenericRpcSocketTransportException("Message recieve callback already setted");
@@ -54,7 +56,7 @@ namespace GenericRpc.SocketTransport
             try
             {
                 await foreach (var clientMessage in _serverSocket.StartReceiveMessagesAsync(cancellationToken))
-                    _onMessageReceived?.Invoke(clientMessage);
+                    await _onMessageReceived.Invoke(clientMessage);
             }
             catch (TaskCanceledException)
             {
@@ -73,11 +75,12 @@ namespace GenericRpc.SocketTransport
 
         public Task DisconnectAsync()
         {
-            if (!IsAlive())
+            if (!IsTransportAlive)
                 return Task.CompletedTask;
 
-            SetStoppingOrThrow();
-            
+            if (!LockForStop())
+                return Task.CompletedTask;
+
             try
             {
                 _clientCancellationTokenSource?.Cancel();

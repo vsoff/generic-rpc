@@ -4,6 +4,8 @@ namespace GenericRpc.Transport
 {
     public interface IServerTransportLayer
     {
+        bool IsAlive { get; }
+
         Task StartAsync(string host, int port);
         Task StopAsync();
 

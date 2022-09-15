@@ -23,6 +23,8 @@ namespace GenericRpc.SocketTransport.UnitTests.Common
         public void Dispose()
         {
             Client.OnExceptionOccured -= _errors.Add;
+            if (Client.IsAlive)
+                Client.DisconnectAsync().GetAwaiter().GetResult();
         }
     }
 }
