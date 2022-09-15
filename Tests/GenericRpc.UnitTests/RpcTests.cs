@@ -2,6 +2,7 @@ using GenericRpc.Communicators;
 using GenericRpc.Serialization;
 using GenericRpc.ServicesGeneration;
 using GenericRpc.SocketTransport;
+using GenericRpc.SocketTransport.Common;
 using GenericRpc.UnitTests.TestServices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
@@ -19,14 +20,14 @@ namespace GenericRpc.UnitTests
         [TestMethod]
         public async Task ComunicatorBuildTest()
         {
-            var serverCommunicator = new CommunicatorBuilder()
+            using var serverCommunicator = new CommunicatorBuilder()
                 .SetSerializer(new DefaultCommunicatorSerializer())
                 .SetServerTransportLayer(new ServerSocketTransportLayer())
                 .SetDependencyResolver(new MockDependencyResolver())
                 .RegisterListenerService<IExampleService, ServerExampleService>()
                 .BuildServer();
 
-            var clientCommunicator = new CommunicatorBuilder()
+            using var clientCommunicator = new CommunicatorBuilder()
                 .SetSerializer(new DefaultCommunicatorSerializer())
                 .SetClientTransportLayer(new ClientSocketTransportLayer())
                 .SetDependencyResolver(new MockDependencyResolver())
@@ -47,6 +48,61 @@ namespace GenericRpc.UnitTests
             });
         }
 
+        [TestMethod]
+        public async Task ExecuteMethodAfterClientDisconnectedTest()
+        {
+            using var serverCommunicator = new CommunicatorBuilder()
+                .SetSerializer(new DefaultCommunicatorSerializer())
+                .SetServerTransportLayer(new ServerSocketTransportLayer())
+                .SetDependencyResolver(new MockDependencyResolver())
+                .RegisterListenerService<IExampleService, ServerExampleService>()
+                .BuildServer();
+
+            using var clientCommunicator = new CommunicatorBuilder()
+                .SetSerializer(new DefaultCommunicatorSerializer())
+                .SetClientTransportLayer(new ClientSocketTransportLayer())
+                .SetDependencyResolver(new MockDependencyResolver())
+                .RegisterProxyService<IExampleService>()
+                .BuildClient();
+
+            await serverCommunicator.StartAsync(_serverIp, _serverPort);
+            await clientCommunicator.ConnectAsync(_serverIp, _serverPort);
+
+            var service = clientCommunicator.GetProxy<IExampleService>();
+            await clientCommunicator.DisconnectAsync();
+
+            await Assert.ThrowsExceptionAsync<GenericRpcSocketOfflineException>(async () =>
+                await ExecuteWithDelayAsync(() => service.ShowMessage("Hello server!")));
+        }
+
+        [TestMethod]
+        public async Task ExecuteMethodAfterServerStoppedTest()
+        {
+            using var serverCommunicator = new CommunicatorBuilder()
+                .SetSerializer(new DefaultCommunicatorSerializer())
+                .SetServerTransportLayer(new ServerSocketTransportLayer())
+                .SetDependencyResolver(new MockDependencyResolver())
+                .RegisterListenerService<IExampleService, ServerExampleService>()
+                .BuildServer();
+
+            using var clientCommunicator = new CommunicatorBuilder()
+                .SetSerializer(new DefaultCommunicatorSerializer())
+                .SetClientTransportLayer(new ClientSocketTransportLayer())
+                .SetDependencyResolver(new MockDependencyResolver())
+                .RegisterProxyService<IExampleService>()
+                .BuildClient();
+
+            await serverCommunicator.StartAsync(_serverIp, _serverPort);
+            await clientCommunicator.ConnectAsync(_serverIp, _serverPort);
+
+            var service = clientCommunicator.GetProxy<IExampleService>();
+            await serverCommunicator.StopAsync();
+
+            await ExecuteWithDelayAsync(() => {
+                service.ShowMessage("Hello server!");
+            });
+        }
+
         private static async Task ExecuteWithDelayAsync(Action action)
         {
             try
@@ -54,9 +110,10 @@ namespace GenericRpc.UnitTests
                 var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(5));
                 await Task.Run(action, cancellationTokenSource.Token);
             }
-            catch (TaskCanceledException)
+            catch (OperationCanceledException)
             {
                 Assert.Fail("Task didn't complete in 5 seconds");
+                throw;
             }
         }
 

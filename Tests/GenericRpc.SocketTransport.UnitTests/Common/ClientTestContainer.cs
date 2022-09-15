@@ -16,15 +16,12 @@ namespace GenericRpc.SocketTransport.UnitTests.Common
             Client = new ClientSocketTransportLayer();
             _errors = new List<CommunicationErrorInfo>();
             Client.OnExceptionOccured += _errors.Add;
-
-            Client.SetRecieveMessageCallback((_) => Task.CompletedTask);
         }
 
         public void Dispose()
         {
             Client.OnExceptionOccured -= _errors.Add;
-            if (Client.IsAlive)
-                Client.DisconnectAsync().GetAwaiter().GetResult();
+            Client.Dispose();
         }
     }
 }

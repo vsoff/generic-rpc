@@ -9,29 +9,29 @@ namespace GenericRpc.SocketTransport
 {
     public class ClientSocketTransportLayer : BaseSocketTransportLayer, IClientTransportLayer
     {
-        private MessageReceived _onMessageReceived;
+        private bool _disposed;
+
 
         private CancellationTokenSource _clientCancellationTokenSource;
         private Socket _serverSocket;
 
         public event Action<CommunicationErrorInfo> OnExceptionOccured;
+        public event MessageReceived OnMessageReceived;
+        public event OnDisconnected OnDisconnected;
 
         public bool IsAlive => IsTransportAlive;
 
-        public void SetRecieveMessageCallback(MessageReceived onMessageReceived)
-        {
-            if (_onMessageReceived != null) throw new GenericRpcSocketTransportException("Message recieve callback already setted");
-            _onMessageReceived = onMessageReceived ?? throw new ArgumentNullException(nameof(onMessageReceived));
-        }
-
         public async Task SendMessageAsync(RpcMessage message)
         {
+            if (_disposed) throw new ObjectDisposedException(GetType().FullName);
+
+            if (!IsAlive) throw new GenericRpcSocketOfflineException();
             await _serverSocket.SendMessageAsync(message);
         }
 
         public async Task ConnectAsync(string host, int port)
         {
-            if (_onMessageReceived == null) throw new GenericRpcSocketTransportException("Message recieve callback not setted");
+            if (_disposed) throw new ObjectDisposedException(GetType().FullName);
 
             SetAliveOrThrow();
 
@@ -56,9 +56,9 @@ namespace GenericRpc.SocketTransport
             try
             {
                 await foreach (var clientMessage in _serverSocket.StartReceiveMessagesAsync(cancellationToken))
-                    await _onMessageReceived.Invoke(clientMessage);
+                    await OnMessageReceived?.Invoke(clientMessage);
             }
-            catch (TaskCanceledException)
+            catch (OperationCanceledException)
             {
             }
             catch (Exception exception)
@@ -75,15 +75,29 @@ namespace GenericRpc.SocketTransport
 
         public Task DisconnectAsync()
         {
-            if (!IsTransportAlive)
-                return Task.CompletedTask;
+            Disconnect();
+            return Task.CompletedTask;
+        }
 
-            if (!LockForStop())
-                return Task.CompletedTask;
+        public void Disconnect()
+        {
+            if (_disposed) throw new ObjectDisposedException(GetType().FullName);
+
+            if (!IsTransportAlive || !LockForStop())
+                return;
+
+            try
+            {
+                _serverSocket.Shutdown(SocketShutdown.Both);
+            }
+            catch
+            {
+            }
 
             try
             {
                 _clientCancellationTokenSource?.Cancel();
+                _clientCancellationTokenSource?.Dispose();
             }
             catch (Exception exception)
             {
@@ -97,6 +111,7 @@ namespace GenericRpc.SocketTransport
             try
             {
                 var tempServerSocket = _serverSocket;
+                _serverSocket = null;
                 if (tempServerSocket != null)
                 {
                     tempServerSocket.Disconnect(false);
@@ -111,9 +126,25 @@ namespace GenericRpc.SocketTransport
             {
                 ResetAlive();
                 ResetStopping();
+                OnDisconnected?.Invoke();
+            }
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+                return;
+
+            try
+            {
+                if (IsAlive)
+                    Disconnect();
+            }
+            catch
+            {
             }
 
-            return Task.CompletedTask;
+            _disposed = true;
         }
     }
 }

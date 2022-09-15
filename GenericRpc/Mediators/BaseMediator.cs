@@ -10,11 +10,20 @@ using System.Threading.Tasks;
 
 namespace GenericRpc.Mediators
 {
-    internal abstract class BaseMediator : IMediator
+    internal abstract class BaseMediator : IMediator, IDisposable
     {
         private readonly ICommunicatorSerializer _serializer;
+        private bool _disposed = false;
 
-        protected ServicesContainerRoot ServicesContainer { get; private set; }
+        private ServicesContainerRoot _servicesContainer;
+        protected ServicesContainerRoot ServicesContainer
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(GetType().FullName);
+                return _servicesContainer;
+            }
+        }
 
         public BaseMediator(ICommunicatorSerializer serializer)
         {
@@ -23,7 +32,9 @@ namespace GenericRpc.Mediators
 
         public void SetServicesContainer(ServicesContainerRoot servicesContainer)
         {
-            ServicesContainer = servicesContainer ?? throw new ArgumentNullException(nameof(servicesContainer));
+            if (_disposed) throw new ObjectDisposedException(GetType().FullName);
+
+            _servicesContainer = servicesContainer ?? throw new ArgumentNullException(nameof(servicesContainer));
         }
 
         public object Execute(ClientContext clientContext, string serviceName, string methodName, params object[] arguments)
@@ -31,6 +42,8 @@ namespace GenericRpc.Mediators
 
         private async Task<object> ExecuteAsync(ClientContext clientContext, string serviceName, string methodName, params object[] arguments)
         {
+            if (_disposed) throw new ObjectDisposedException(GetType().FullName);
+
             // Get service and method information.
             var servicInterfaceType = ServicesContainer.GetServiceInterfaceType(serviceName);
             var serviceMethod = servicInterfaceType.GetMethod(methodName);
@@ -72,6 +85,8 @@ namespace GenericRpc.Mediators
 
         protected async Task OnReceiveMessage(RpcMessage message, ClientContext clientContext)
         {
+            if (_disposed) throw new ObjectDisposedException(GetType().FullName);
+
             if (message == null) throw new ArgumentNullException(nameof(message));
 
             switch (message.MessageType)
@@ -108,6 +123,24 @@ namespace GenericRpc.Mediators
                     break;
                 default: throw new GenericRpcException($"Unknown message type {message.MessageType}");
             }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed)
+                return;
+
+            if (disposing)
+            {
+                _servicesContainer = null;
+            }
+
+            _disposed = true;
         }
 
         protected class ResponseAwaiter

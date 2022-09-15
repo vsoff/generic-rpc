@@ -2,6 +2,8 @@
 
 namespace GenericRpc.Transport
 {
+    public delegate void OnDisconnected();
+    public delegate void ServerShutdown();
     public delegate void ClientConnected(ClientContext context);
     public delegate void ClientDisconnected(ClientContext context);
     public delegate Task MessageReceived(RpcMessage message);

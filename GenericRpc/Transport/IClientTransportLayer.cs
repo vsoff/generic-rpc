@@ -1,8 +1,9 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 
 namespace GenericRpc.Transport
 {
-    public interface IClientTransportLayer
+    public interface IClientTransportLayer : IDisposable
     {
         bool IsAlive { get; }
 
@@ -10,6 +11,7 @@ namespace GenericRpc.Transport
         Task DisconnectAsync();
 
         Task SendMessageAsync(RpcMessage message);
-        void SetRecieveMessageCallback(MessageReceived onMessageReceived);
+        event MessageReceived OnMessageReceived;
+        event OnDisconnected OnDisconnected;
     }
 }

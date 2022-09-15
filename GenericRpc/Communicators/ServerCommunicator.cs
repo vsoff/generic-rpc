@@ -1,11 +1,12 @@
-﻿using GenericRpc.ServicesGeneration;
+﻿using GenericRpc.Mediators;
+using GenericRpc.ServicesGeneration;
 using GenericRpc.Transport;
 using System;
 using System.Threading.Tasks;
 
 namespace GenericRpc.Communicators
 {
-    public interface IServerCommunicator
+    public interface IServerCommunicator : IDisposable
     {
         Task StartAsync(string host, int port);
         Task StopAsync();
@@ -16,25 +17,59 @@ namespace GenericRpc.Communicators
 
     internal sealed class ServerCommunicator : IServerCommunicator
     {
+        private bool _disposed;
+
         private readonly IServerTransportLayer _serverTransportLayer;
         private readonly ServicesContainerRoot _servicesContainer;
+        private readonly IMediator _mediator;
 
         internal ServerCommunicator(
             IServerTransportLayer serverTransportLayer,
-            ServicesContainerRoot servicesContainer)
+            ServicesContainerRoot servicesContainer,
+            IMediator mediator)
         {
             _serverTransportLayer = serverTransportLayer ?? throw new ArgumentException(nameof(serverTransportLayer));
             _servicesContainer = servicesContainer ?? throw new ArgumentException(nameof(servicesContainer));
+            _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         }
 
         public TServiceInterface GetListener<TServiceInterface>(ClientContext context)
-            => (TServiceInterface)_servicesContainer.GetServicesContainer(context).GetListenerService(typeof(TServiceInterface));
+        {
+            if (_disposed) throw new ObjectDisposedException(GetType().FullName);
+
+            return (TServiceInterface)_servicesContainer.GetServicesContainer(context).GetListenerService(typeof(TServiceInterface));
+        }
 
         public TServiceInterface GetProxy<TServiceInterface>(ClientContext context)
-            => (TServiceInterface)_servicesContainer.GetServicesContainer(context).GetProxyService(typeof(TServiceInterface));
+        {
+            if (_disposed) throw new ObjectDisposedException(GetType().FullName);
 
-        public async Task StartAsync(string host, int port) => await _serverTransportLayer.StartAsync(host, port);
+            return (TServiceInterface)_servicesContainer.GetServicesContainer(context).GetProxyService(typeof(TServiceInterface));
+        }
 
-        public async Task StopAsync() => await _serverTransportLayer.StopAsync();
+        public async Task StartAsync(string host, int port)
+        {
+            if (_disposed) throw new ObjectDisposedException(GetType().FullName);
+
+            await _serverTransportLayer.StartAsync(host, port);
+        }
+
+        public async Task StopAsync()
+        {
+            if (_disposed) throw new ObjectDisposedException(GetType().FullName);
+
+            await _serverTransportLayer.StopAsync();
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+                return;
+
+            _serverTransportLayer.Dispose();
+            _mediator.Dispose();
+
+            _disposed = true;
+        }
     }
 }

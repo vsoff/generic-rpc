@@ -42,22 +42,24 @@ try
         await serverCommunicator.StartAsync(ip, port);
 
         var serverCancellactionTokenSource = new CancellationTokenSource();
+        var serverCancellationToken = serverCancellactionTokenSource.Token;
         var tokensByContext = new ConcurrentDictionary<ClientContext, CancellationTokenSource>();
 
-        transportLayer.SetClientConnectedCallback(async (context) =>
+        transportLayer.OnClientConnected += async (context) =>
         {
             var service = serverCommunicator.GetProxy<IClientExampleService>(context);
             await Task.Factory.StartNew(async () =>
             {
                 var clientTokenSource = new CancellationTokenSource();
+                var clientToken = clientTokenSource.Token;
                 tokensByContext.TryAdd(context, clientTokenSource);
 
                 while (true)
                 {
                     try
                     {
-                        clientTokenSource.Token.ThrowIfCancellationRequested();
-                        serverCancellactionTokenSource.Token.ThrowIfCancellationRequested();
+                        clientToken.ThrowIfCancellationRequested();
+                        serverCancellationToken.ThrowIfCancellationRequested();
                         await Task.Delay(1000);
 
                         service.ShowMessage("Hello, I'm server!");
@@ -73,13 +75,13 @@ try
                     }
                 }
             });
-        });
+        };
 
-        transportLayer.SetClientDisconnectedCallback((context) =>
+        transportLayer.OnClientDisconnected += (context) =>
         {
             if (tokensByContext.TryRemove(context, out var source))
                 source.Cancel();
-        });
+        };
 
         Console.WriteLine("Press enter to stop server...");
         Console.ReadLine();
@@ -102,13 +104,14 @@ try
         var service = clientCommunicator.GetProxy<IServerExampleService>();
 
         var cancellactionTokenSource = new CancellationTokenSource();
+        var cancellationToken = cancellactionTokenSource.Token;
         await Task.Factory.StartNew(async () =>
         {
             while (true)
             {
                 try
                 {
-                    cancellactionTokenSource.Token.ThrowIfCancellationRequested();
+                    cancellationToken.ThrowIfCancellationRequested();
                     await Task.Delay(1000);
 
                     var text = service.Concat("Hello ", "server!");

@@ -30,6 +30,10 @@ namespace GenericRpc.UnitTests
             {
                 throw new MediatorOkException();
             }
+
+            public void Dispose()
+            {
+            }
         }
 
         private class MediatorOkException : Exception {}

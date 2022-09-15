@@ -82,7 +82,7 @@ namespace GenericRpc.Communicators
             var serviceContainer = BuildServiceContainerRoot(mediator);
             mediator.SetServicesContainer(serviceContainer);
 
-            return new ServerCommunicator(_serverTransportLayer, serviceContainer);
+            return new ServerCommunicator(_serverTransportLayer, serviceContainer, mediator);
         }
 
         public IClientCommunicator BuildClient()
@@ -94,7 +94,7 @@ namespace GenericRpc.Communicators
             var serviceContainer = BuildServiceContainerRoot(mediator);
             mediator.SetServicesContainer(serviceContainer);
 
-            return new ClientCommunicator(_clientTransportLayer, serviceContainer);
+            return new ClientCommunicator(_clientTransportLayer, serviceContainer, mediator);
         }
 
         private ServicesContainerRoot BuildServiceContainerRoot(IMediator mediator)

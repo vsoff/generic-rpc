@@ -4,13 +4,7 @@ namespace GenericRpc.SocketTransport
 {
     public abstract class BaseSocketTransportLayer
     {
-        protected bool IsTransportAlive
-        {
-            get
-            {
-                lock (_startLock) { return _isAlive; }
-            }
-        }
+        protected bool IsTransportAlive => _isAlive;
 
         private readonly object _startLock = new();
         private readonly object _stopLock = new();

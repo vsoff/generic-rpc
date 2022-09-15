@@ -13,4 +13,11 @@ namespace GenericRpc.SocketTransport.Common
         {
         }
     }
+
+    public class GenericRpcSocketOfflineException : GenericRpcSocketTransportException
+    {
+        public GenericRpcSocketOfflineException() : base("Socket is not alive")
+        {
+        }
+    }
 }
