@@ -125,11 +125,12 @@ namespace GenericRpc.SocketTransport
         {
             while (true)
             {
-                cancellationToken.ThrowIfCancellationRequested();
                 var clientContext = new ClientContext(Guid.NewGuid());
 
                 try
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
+
                     Socket clientSocket = await _serverSocket.AcceptAsync();
                     cancellationToken.ThrowIfCancellationRequested();
 
@@ -137,10 +138,11 @@ namespace GenericRpc.SocketTransport
                         throw new GenericRpcSocketTransportException("Socket not added");
 
                     OnClientConnected?.Invoke(clientContext);
-                    await Task.Run(async () => await CommunicateWithClientAsync(clientContext, cancellationToken));
+                    await Task.Factory.StartNew(async () => await CommunicateWithClientAsync(clientContext, cancellationToken));
                 }
                 catch (TaskCanceledException)
                 {
+                    break;
                 }
                 catch (Exception exception)
                 {
@@ -167,6 +169,7 @@ namespace GenericRpc.SocketTransport
             }
             catch (TaskCanceledException)
             {
+                SafeDisconnectClient(context);
             }
             catch (Exception exception)
             {

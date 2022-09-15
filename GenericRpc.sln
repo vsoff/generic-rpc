@@ -13,6 +13,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GenericRpc.UnitTests", "Tes
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GenericRpc.SocketTransport.UnitTests", "Tests\GenericRpc.SocketTransport.UnitTests\GenericRpc.SocketTransport.UnitTests.csproj", "{D32664E1-7BB4-499A-8344-CCECED76A725}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{C916A8E4-E57E-425E-98CA-F5B27EF4B34A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApplicationExample", "Examples\ConsoleApplicationExample\ConsoleApplicationExample.csproj", "{A82F4EB6-5757-4414-8776-672CCB05D21B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -35,6 +39,10 @@ Global
 		{D32664E1-7BB4-499A-8344-CCECED76A725}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D32664E1-7BB4-499A-8344-CCECED76A725}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D32664E1-7BB4-499A-8344-CCECED76A725}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A82F4EB6-5757-4414-8776-672CCB05D21B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A82F4EB6-5757-4414-8776-672CCB05D21B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A82F4EB6-5757-4414-8776-672CCB05D21B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A82F4EB6-5757-4414-8776-672CCB05D21B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -42,6 +50,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{C1B0F355-A47C-418D-BF01-75BE991463B5} = {C1090BD2-2D30-4DA1-A1DC-770D803B7445}
 		{D32664E1-7BB4-499A-8344-CCECED76A725} = {C1090BD2-2D30-4DA1-A1DC-770D803B7445}
+		{A82F4EB6-5757-4414-8776-672CCB05D21B} = {C916A8E4-E57E-425E-98CA-F5B27EF4B34A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {BCF2B49D-8F8D-4DFB-8671-8F5E00F085D2}

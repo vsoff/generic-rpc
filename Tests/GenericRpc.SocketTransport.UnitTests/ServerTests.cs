@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 
 namespace GenericRpc.SocketTransport.UnitTests
 {
-
     [TestClass]
     public class ServerTests
     {
