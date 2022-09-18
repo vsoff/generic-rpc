@@ -10,6 +10,7 @@ namespace GenericRpc.Transport
         Task StartAsync(string host, int port);
         Task StopAsync();
 
+        Task DisconnectClientAsync(ClientContext context);
         Task SendMessageAsync(RpcMessage message, ClientContext context);
 
         event MessageReceivedWithClientId OnMessageReceived;

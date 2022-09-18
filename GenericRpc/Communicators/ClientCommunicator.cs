@@ -8,6 +8,8 @@ namespace GenericRpc.Communicators
 {
     public interface IClientCommunicator : IDisposable
     {
+        event OnDisconnected OnDisconnected;
+
         Task ConnectAsync(string host, int port);
         Task DisconnectAsync();
 
@@ -22,6 +24,8 @@ namespace GenericRpc.Communicators
         private readonly ServicesContainerRoot _servicesContainer;
         private readonly IMediator _mediator;
 
+        public event OnDisconnected OnDisconnected;
+
         internal ClientCommunicator(
             IClientTransportLayer clientTransportLayer,
             ServicesContainerRoot servicesContainer,
@@ -30,6 +34,8 @@ namespace GenericRpc.Communicators
             _clientTransportLayer = clientTransportLayer ?? throw new ArgumentException(nameof(clientTransportLayer));
             _servicesContainer = servicesContainer ?? throw new ArgumentException(nameof(servicesContainer));
             _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+
+            clientTransportLayer.OnDisconnected += ClientTransportLayer_OnDisconnected;
         }
 
         public async Task ConnectAsync(string host, int port)
@@ -58,10 +64,13 @@ namespace GenericRpc.Communicators
             if (_disposed)
                 return;
 
+            _clientTransportLayer.OnDisconnected -= ClientTransportLayer_OnDisconnected;
             _clientTransportLayer.Dispose();
             _mediator.Dispose();
 
             _disposed = true;
         }
+
+        private void ClientTransportLayer_OnDisconnected() => Task.Run(() => OnDisconnected?.Invoke());
     }
 }

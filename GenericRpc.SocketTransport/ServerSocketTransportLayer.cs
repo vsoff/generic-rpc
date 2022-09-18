@@ -28,6 +28,16 @@ namespace GenericRpc.SocketTransport
 
         public bool IsAlive => IsTransportAlive;
 
+        public async Task DisconnectClientAsync(ClientContext context)
+        {
+            if (_disposed) throw new ObjectDisposedException(GetType().FullName);
+            if (!IsAlive) throw new GenericRpcSocketOfflineException();
+            if (!_socketByClientId.TryGetValue(context, out var clientSocket))
+                throw new GenericRpcSocketTransportException($"Client with id {context.Id} not connected");
+            
+            await Task.Run(() => SafeDisconnectClient(context));
+        }
+
         public async Task SendMessageAsync(RpcMessage message, ClientContext context)
         {
             if (_disposed) throw new ObjectDisposedException(GetType().FullName);
@@ -142,6 +152,23 @@ namespace GenericRpc.SocketTransport
             }
         }
 
+        public void Dispose()
+        {
+            if (_disposed)
+                return;
+
+            try
+            {
+                if (IsAlive)
+                    Stop();
+            }
+            catch
+            {
+            }
+
+            _disposed = true;
+        }
+
         private async Task AcceptClientsAsync(CancellationToken cancellationToken)
         {
             while (true)
@@ -216,23 +243,6 @@ namespace GenericRpc.SocketTransport
             {
                 OnExceptionOccured?.Invoke(new CommunicationErrorInfo($"Error while disconnect client socket. Id = {context.Id}", exception));
             }
-        }
-
-        public void Dispose()
-        {
-            if (_disposed)
-                return;
-
-            try
-            {
-                if (IsAlive)
-                    Stop();
-            }
-            catch
-            {
-            }
-
-            _disposed = true;
         }
     }
 }
