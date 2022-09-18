@@ -2,7 +2,7 @@
 
 namespace GenericRpc.ServicesGeneration
 {
-    internal class ServiceTypesInfo
+    internal sealed class ServiceTypesInfo
     {
         public string ServiceName => InterfaceType.Name;
         public Type InterfaceType { get; }

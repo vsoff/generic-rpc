@@ -2,7 +2,7 @@
 
 namespace GenericRpc
 {
-    public class ClientContext
+    public sealed class ClientContext
     {
         public readonly Guid Id;
         public bool IsAccessGranted { get; set; }

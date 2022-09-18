@@ -36,7 +36,7 @@ namespace GenericRpc.ServicesGeneration
 
             // Generate type.
             var generatedTypeName = $"{interfaceType.Name.Substring(1)}_{Guid.NewGuid():N}";
-            var typeBuilder = moduleBuilder.DefineType(generatedTypeName, TypeAttributes.Public | TypeAttributes.Class, typeof(ProxyService));
+            var typeBuilder = moduleBuilder.DefineType(generatedTypeName, TypeAttributes.Public | TypeAttributes.Class | TypeAttributes.Sealed, typeof(ProxyService));
             typeBuilder.AddInterfaceImplementation(interfaceType);
 
             // Generate constructor.

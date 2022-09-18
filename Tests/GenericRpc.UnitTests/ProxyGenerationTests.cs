@@ -7,7 +7,7 @@ using System;
 namespace GenericRpc.UnitTests
 {
     [TestClass]
-    public class ProxyGenerationTests
+    public sealed class ProxyGenerationTests
     {
         [TestMethod]
         public void Test()

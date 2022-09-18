@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace GenericRpc.ServicesGeneration
 {
-    internal class ServicesContainerRoot
+    internal sealed class ServicesContainerRoot
     {
         private readonly ConcurrentDictionary<ClientContext, Container> _clientServicesByContext;
 

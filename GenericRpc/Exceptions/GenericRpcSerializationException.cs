@@ -2,7 +2,7 @@
 
 namespace GenericRpc.Exceptions
 {
-    public class GenericRpcSerializationException : GenericRpcException
+    public sealed class GenericRpcSerializationException : GenericRpcException
     {
         public GenericRpcSerializationException(string message) : base(message)
         {

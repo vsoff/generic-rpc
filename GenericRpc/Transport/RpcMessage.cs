@@ -2,7 +2,7 @@
 
 namespace GenericRpc.Transport
 {
-    public class RpcMessage
+    public sealed class RpcMessage
     {
         public readonly string ServiceName;
         public readonly string MethodName;

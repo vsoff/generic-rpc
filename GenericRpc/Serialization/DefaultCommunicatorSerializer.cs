@@ -7,7 +7,7 @@ namespace GenericRpc.Serialization
     /// <summary>
     /// Dummy implementation of data serialization.
     /// </summary>
-    public class DefaultCommunicatorSerializer : ICommunicatorSerializer
+    public sealed class DefaultCommunicatorSerializer : ICommunicatorSerializer
     {
         public object Deserialize(byte[] bytes, Type type)
         {

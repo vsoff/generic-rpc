@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace GenericRpc.SocketTransport
 {
-    public class ClientSocketTransportLayer : BaseSocketTransportLayer, IClientTransportLayer
+    public sealed class ClientSocketTransportLayer : BaseSocketTransportLayer, IClientTransportLayer
     {
         private bool _disposed;
 

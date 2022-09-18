@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 namespace GenericRpc.UnitTests
 {
     [TestClass]
-    public class RpcTests
+    public sealed class RpcTests
     {
         private const string _serverIp = "127.0.0.1";
         private const ushort _serverPort = 21337;

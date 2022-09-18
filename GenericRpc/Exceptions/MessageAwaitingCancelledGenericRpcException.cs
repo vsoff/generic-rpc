@@ -2,7 +2,7 @@
 
 namespace GenericRpc.Exceptions
 {
-    public class MessageAwaitingCancelledGenericRpcException : Exception
+    public sealed class MessageAwaitingCancelledGenericRpcException : Exception
     {
         public MessageAwaitingCancelledGenericRpcException(string message) : base(message)
         {

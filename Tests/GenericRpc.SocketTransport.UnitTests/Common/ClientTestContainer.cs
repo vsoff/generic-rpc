@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace GenericRpc.SocketTransport.UnitTests.Common
 {
-    internal class ClientTestContainer : IDisposable
+    internal sealed class ClientTestContainer : IDisposable
     {
         public ClientSocketTransportLayer Client { get; }
         public IReadOnlyList<CommunicationErrorInfo> Errors => _errors;

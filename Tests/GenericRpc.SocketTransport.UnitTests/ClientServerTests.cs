@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 namespace GenericRpc.SocketTransport.UnitTests
 {
     [TestClass]
-    public class ClientServerTests
+    public sealed class ClientServerTests
     {
         [TestMethod]
         public async Task ServerDisconnectFirstTest()
