@@ -1,4 +1,5 @@
 using GenericRpc.Communicators;
+using GenericRpc.Exceptions;
 using GenericRpc.Serialization;
 using GenericRpc.ServicesGeneration;
 using GenericRpc.SocketTransport;
@@ -98,9 +99,8 @@ namespace GenericRpc.UnitTests
             var service = clientCommunicator.GetProxy<IExampleService>();
             await serverCommunicator.StopAsync();
 
-            await ExecuteWithDelayAsync(() => {
-                service.ShowMessage("Hello server!");
-            });
+            await Assert.ThrowsExceptionAsync<MessageAwaitingCancelledGenericRpcException>(async () =>
+                await ExecuteWithDelayAsync(() => service.ShowMessage("Hello server!")));
         }
 
         private static async Task ExecuteWithDelayAsync(Action action)

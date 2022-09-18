@@ -9,7 +9,7 @@ namespace GenericRpc.Mediators
 {
     internal sealed class ClientMediator : BaseMediator
     {
-        private readonly ConcurrentDictionary<Guid, ResponseAwaiter> _awaiterByMessageId = new ConcurrentDictionary<Guid, ResponseAwaiter>();
+        private readonly AwaitingMessagesContainerRoot _awaitersContainer;
         private readonly IClientTransportLayer _clientTransportLayer;
 
         private bool _disposed = false;
@@ -20,8 +20,10 @@ namespace GenericRpc.Mediators
             : base(serializer)
         {
             _clientTransportLayer = clientTransportLayer ?? throw new ArgumentNullException(nameof(clientTransportLayer));
+            _awaitersContainer = new AwaitingMessagesContainerRoot();
+
             clientTransportLayer.OnMessageReceived += MessageReceived;
-            clientTransportLayer.OnDisconnected += OnDisconnected; ;
+            clientTransportLayer.OnDisconnected += OnDisconnected;
         }
 
         protected override object GetListenerService(ClientContext clientContext, Type serviceInterfaceType)
@@ -42,29 +44,21 @@ namespace GenericRpc.Mediators
         protected override void CreateResponseAwaiter(ClientContext clientContext, Guid messageId)
         {
             if (_disposed) throw new ObjectDisposedException(GetType().FullName);
-
-            if (!_awaiterByMessageId.TryAdd(messageId, new ResponseAwaiter()))
-                throw new GenericRpcException($"Message with Id={messageId} already exists");
+            _awaitersContainer.ClientContainer.CreateResponseAwaiter(messageId);
         }
 
         protected override RpcMessage AwaitResponse(ClientContext clientContext, Guid messageId)
         {
             if (_disposed) throw new ObjectDisposedException(GetType().FullName);
 
-            if (!_awaiterByMessageId.TryGetValue(messageId, out var awaiter))
-                throw new GenericRpcException($"Awaiter for message with Id={messageId} not found");
-
-            var response = awaiter.GetResponse();
-            _awaiterByMessageId.TryRemove(messageId, out _);
-            return response;
+            return _awaitersContainer.ClientContainer.AwaitResponse(messageId);
         }
 
         protected override void SetResponse(ClientContext clientContext, RpcMessage responseMessage)
         {
             if (_disposed) throw new ObjectDisposedException(GetType().FullName);
 
-            if (_awaiterByMessageId.TryGetValue(responseMessage.MessageId, out var awaiter))
-                awaiter.SetResponse(responseMessage);
+            _awaitersContainer.ClientContainer.SetResponse(responseMessage);
         }
 
         protected override void Dispose(bool disposing)
@@ -75,7 +69,7 @@ namespace GenericRpc.Mediators
             if (disposing)
             {
                 _clientTransportLayer.OnMessageReceived -= MessageReceived;
-                // TODO: release all awaiters.
+                _awaitersContainer.Dispose();
             }
 
             base.Dispose(disposing);
@@ -84,7 +78,7 @@ namespace GenericRpc.Mediators
 
         private void OnDisconnected()
         {
-            // TODO: release all awaiters.
+            _awaitersContainer.Clear();
         }
 
         private async Task MessageReceived(RpcMessage message) => await OnReceiveMessage(message, null);

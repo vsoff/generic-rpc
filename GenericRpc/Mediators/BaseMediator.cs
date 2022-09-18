@@ -142,31 +142,5 @@ namespace GenericRpc.Mediators
 
             _disposed = true;
         }
-
-        protected class ResponseAwaiter
-        {
-            private readonly ManualResetEvent _resetEvent;
-            private RpcMessage _message;
-
-            public ResponseAwaiter()
-            {
-                _resetEvent = new ManualResetEvent(false);
-            }
-
-            public void SetResponse(RpcMessage message)
-            {
-                if (message == null) throw new ArgumentNullException(nameof(message));
-                if (_message != null) throw new GenericRpcException($"Message already setted");
-
-                _message = message;
-                _resetEvent.Set();
-            }
-
-            public RpcMessage GetResponse()
-            {
-                _resetEvent.WaitOne();
-                return _message;
-            }
-        }
     }
 }
