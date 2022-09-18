@@ -92,6 +92,7 @@ namespace GenericRpc.Mediators
             if (_disposed) throw new ObjectDisposedException(GetType().FullName);
 
             ServicesContainer.RegisterServicesForClientContext(clientContext);
+            _awaitersContainer.RegisterServicesForClientContext(clientContext);
         }
 
         private void OnClientDisconnected(ClientContext clientContext)
@@ -99,6 +100,7 @@ namespace GenericRpc.Mediators
             if (_disposed) throw new ObjectDisposedException(GetType().FullName);
 
             ServicesContainer.UnregisterServicesForClientContext(clientContext);
+            _awaitersContainer.UnregisterServicesForClientContext(clientContext);
         }
     }
 }
