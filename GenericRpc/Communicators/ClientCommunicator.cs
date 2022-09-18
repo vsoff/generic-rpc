@@ -12,7 +12,6 @@ namespace GenericRpc.Communicators
         Task DisconnectAsync();
 
         TServiceInterface GetProxy<TServiceInterface>();
-        TServiceInterface GetListener<TServiceInterface>();
     }
 
     internal sealed class ClientCommunicator : IClientCommunicator
@@ -45,13 +44,6 @@ namespace GenericRpc.Communicators
             if (_disposed) throw new ObjectDisposedException(GetType().FullName);
 
             await _clientTransportLayer.DisconnectAsync();
-        }
-
-        public TServiceInterface GetListener<TServiceInterface>()
-        {
-            if (_disposed) throw new ObjectDisposedException(GetType().FullName);
-
-            return (TServiceInterface)_servicesContainer.ClientContainer.GetListenerService(typeof(TServiceInterface));
         }
 
         public TServiceInterface GetProxy<TServiceInterface>()

@@ -12,7 +12,6 @@ namespace GenericRpc.Communicators
         Task StopAsync();
 
         TServiceInterface GetProxy<TServiceInterface>(ClientContext context);
-        TServiceInterface GetListener<TServiceInterface>(ClientContext context);
     }
 
     internal sealed class ServerCommunicator : IServerCommunicator
@@ -31,13 +30,6 @@ namespace GenericRpc.Communicators
             _serverTransportLayer = serverTransportLayer ?? throw new ArgumentException(nameof(serverTransportLayer));
             _servicesContainer = servicesContainer ?? throw new ArgumentException(nameof(servicesContainer));
             _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
-        }
-
-        public TServiceInterface GetListener<TServiceInterface>(ClientContext context)
-        {
-            if (_disposed) throw new ObjectDisposedException(GetType().FullName);
-
-            return (TServiceInterface)_servicesContainer.GetServicesContainer(context).GetListenerService(typeof(TServiceInterface));
         }
 
         public TServiceInterface GetProxy<TServiceInterface>(ClientContext context)
