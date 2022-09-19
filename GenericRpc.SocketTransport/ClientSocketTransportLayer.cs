@@ -11,7 +11,6 @@ namespace GenericRpc.SocketTransport
     {
         private bool _disposed;
 
-
         private CancellationTokenSource _clientCancellationTokenSource;
         private Socket _serverSocket;
 
@@ -50,13 +49,19 @@ namespace GenericRpc.SocketTransport
             }
         }
 
-
         private async Task CommunicateWithServerAsync(CancellationToken cancellationToken)
         {
             try
             {
+                await Task.Factory.StartNew(async () => await CheckConnectionLoopAsync(cancellationToken));
+
                 await foreach (var clientMessage in _serverSocket.StartReceiveMessagesAsync(cancellationToken))
+                {
+                    if (clientMessage.MessageType == RpcMessageType.KeepAlive)
+                        continue;
+
                     await OnMessageReceived?.Invoke(clientMessage);
+                }
             }
             catch (OperationCanceledException)
             {
@@ -70,6 +75,25 @@ namespace GenericRpc.SocketTransport
                     OnExceptionOccured?.Invoke(new CommunicationErrorInfo("Error communicating with server", exception));
                     throw new GenericRpcSocketTransportException("Error communacating with server", exception);
                 }
+            }
+        }
+
+        private async Task CheckConnectionLoopAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                while (IsAlive)
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                        return;
+
+                    await _serverSocket.SendMessageAsync(RpcMessage.KeepAliveMessage);
+                    await Task.Delay(KeepAlivePeriod);
+                }
+            }
+            catch
+            {
+                await DisconnectAsync();
             }
         }
 

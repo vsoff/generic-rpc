@@ -34,12 +34,15 @@ namespace GenericRpc.SocketTransport.Common
 
         public static RpcMessage Read(BinaryReader reader)
         {
+            var messageType = (RpcMessageType)reader.ReadByte();
+            if (messageType == RpcMessageType.KeepAlive)
+                return RpcMessage.KeepAliveMessage;
+
             const int guidBytesCount = 16;
             var serviceName = reader.ReadString();
             var methodName = reader.ReadString();
             var messageIdBytes = reader.ReadBytes(guidBytesCount);
             var messageId = new Guid(messageIdBytes);
-            var messageType = (RpcMessageType)reader.ReadByte();
 
             byte[][] requestData = null;
             byte[] resoponseData = null;
@@ -75,10 +78,13 @@ namespace GenericRpc.SocketTransport.Common
 
         public static void Write(BinaryWriter writer, RpcMessage source)
         {
+            writer.Write((byte)source.MessageType);
+            if (source.MessageType == RpcMessageType.KeepAlive)
+                return;
+
             writer.Write(source.ServiceName);
             writer.Write(source.MethodName);
             writer.Write(source.MessageId.ToByteArray());
-            writer.Write((byte)source.MessageType);
             switch (source.MessageType)
             {
                 case RpcMessageType.Request:

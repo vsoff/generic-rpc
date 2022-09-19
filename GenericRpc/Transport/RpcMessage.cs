@@ -4,10 +4,10 @@ namespace GenericRpc.Transport
 {
     public sealed class RpcMessage
     {
+        public readonly RpcMessageType MessageType;
         public readonly string ServiceName;
         public readonly string MethodName;
         public readonly Guid MessageId;
-        public readonly RpcMessageType MessageType;
         public readonly byte[][] RequestData;
         public readonly byte[] ResponseData;
 
@@ -20,5 +20,7 @@ namespace GenericRpc.Transport
             RequestData = requestData;
             ResponseData = responseData;
         }
+
+        public static readonly RpcMessage KeepAliveMessage = new RpcMessage(null, null, Guid.Empty, RpcMessageType.KeepAlive, null, null);
     }
 }

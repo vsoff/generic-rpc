@@ -2,6 +2,7 @@
 using GenericRpc.Communicators;
 using GenericRpc.Serialization;
 using GenericRpc.SocketTransport;
+using GenericRpc.SocketTransport.Common;
 using GenericRpc.Transport;
 using System.Collections.Concurrent;
 
@@ -116,6 +117,11 @@ try
 
                     var text = service.Concat("Hello ", "server!");
                     service.ShowMessage(text);
+                }
+                catch (GenericRpcSocketOfflineException)
+                {
+                    Console.WriteLine($"Socket is offline");
+                    return;
                 }
                 catch (OperationCanceledException)
                 {

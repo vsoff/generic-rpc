@@ -209,9 +209,15 @@ namespace GenericRpc.SocketTransport
                 if (!_socketByClientId.TryGetValue(context, out var clientSocket))
                     return;
 
+                await Task.Factory.StartNew(async () => await CheckConnectionLoopAsync(context, clientSocket, cancellationToken));
+
                 await foreach (var clientMessage in clientSocket.StartReceiveMessagesAsync(cancellationToken))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
+
+                    if (clientMessage.MessageType == RpcMessageType.KeepAlive)
+                        continue;
+
                     await OnMessageReceived?.Invoke(clientMessage, context);
                 }
             }
@@ -227,6 +233,24 @@ namespace GenericRpc.SocketTransport
                 SafeDisconnectClient(context);
             }
         }
+        private async Task CheckConnectionLoopAsync(ClientContext context, Socket clientSocket, CancellationToken cancellationToken)
+        {
+            try
+            {
+                while (IsAlive)
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                        return;
+
+                    await clientSocket.SendMessageAsync(RpcMessage.KeepAliveMessage);
+                    await Task.Delay(KeepAlivePeriod);
+                }
+            }
+            catch
+            {
+                SafeDisconnectClient(context);
+            }
+        }
 
         private void SafeDisconnectClient(ClientContext context)
         {
@@ -235,6 +259,7 @@ namespace GenericRpc.SocketTransport
                 if (!_socketByClientId.TryRemove(context, out var clientSocket))
                     return;
 
+                clientSocket?.Shutdown(SocketShutdown.Both);
                 clientSocket?.Disconnect(false);
                 clientSocket?.Dispose();
                 OnClientDisconnected?.Invoke(context);

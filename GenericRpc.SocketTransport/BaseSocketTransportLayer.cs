@@ -1,9 +1,11 @@
 ﻿using GenericRpc.SocketTransport.Common;
+using System;
 
 namespace GenericRpc.SocketTransport
 {
     public abstract class BaseSocketTransportLayer
     {
+        protected static readonly TimeSpan KeepAlivePeriod = TimeSpan.FromMilliseconds(500);
         protected bool IsTransportAlive => _isAlive;
 
         private readonly object _startLock = new();

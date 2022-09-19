@@ -4,6 +4,8 @@ using GenericRpc.Serialization;
 using GenericRpc.ServicesGeneration;
 using GenericRpc.SocketTransport;
 using GenericRpc.SocketTransport.Common;
+using GenericRpc.Transport;
+using GenericRpc.UnitTests.Common;
 using GenericRpc.UnitTests.TestServices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
@@ -15,62 +17,36 @@ namespace GenericRpc.UnitTests
     [TestClass]
     public sealed class RpcTests
     {
-        private const string _serverIp = "127.0.0.1";
-        private const ushort _serverPort = 21337;
-
         [TestMethod]
         public async Task ComunicatorBuildTest()
         {
-            using var serverCommunicator = new CommunicatorBuilder()
-                .SetSerializer(new DefaultCommunicatorSerializer())
-                .SetServerTransportLayer(new ServerSocketTransportLayer())
-                .SetDependencyResolver(new MockDependencyResolver())
-                .RegisterListenerService<IExampleService, ServerExampleService>()
-                .BuildServer();
+            using var server = CreateServer();
+            using var client = CreateClient();
 
-            using var clientCommunicator = new CommunicatorBuilder()
-                .SetSerializer(new DefaultCommunicatorSerializer())
-                .SetClientTransportLayer(new ClientSocketTransportLayer())
-                .SetDependencyResolver(new MockDependencyResolver())
-                .RegisterProxyService<IExampleService>()
-                .BuildClient();
+            await server.StartAsync(TestConfiguration.ServerIp, TestConfiguration.ServerPort);
+            await client.ConnectAsync(TestConfiguration.ServerIp, TestConfiguration.ServerPort);
 
-            await serverCommunicator.StartAsync(_serverIp, _serverPort);
-            await clientCommunicator.ConnectAsync(_serverIp, _serverPort);
-
-            var service = clientCommunicator.GetProxy<IExampleService>();
+            var service = client.GetProxy<IExampleService>();
 
             await ExecuteWithDelayAsync(() => {
                 var sum = service.Sum(123, 321);
                 Assert.AreEqual(444, sum);
             });
-            await ExecuteWithDelayAsync(() => {
-                service.ShowMessage("Hello server!");
-            });
+
+            await ExecuteWithDelayAsync(() => { service.ShowMessage("Hello server!"); });
         }
 
         [TestMethod]
         public async Task ExecuteMethodAfterClientDisconnectedTest()
         {
-            using var serverCommunicator = new CommunicatorBuilder()
-                .SetSerializer(new DefaultCommunicatorSerializer())
-                .SetServerTransportLayer(new ServerSocketTransportLayer())
-                .SetDependencyResolver(new MockDependencyResolver())
-                .RegisterListenerService<IExampleService, ServerExampleService>()
-                .BuildServer();
+            using var server = CreateServer();
+            using var client = CreateClient();
 
-            using var clientCommunicator = new CommunicatorBuilder()
-                .SetSerializer(new DefaultCommunicatorSerializer())
-                .SetClientTransportLayer(new ClientSocketTransportLayer())
-                .SetDependencyResolver(new MockDependencyResolver())
-                .RegisterProxyService<IExampleService>()
-                .BuildClient();
+            await server.StartAsync(TestConfiguration.ServerIp, TestConfiguration.ServerPort);
+            await client.ConnectAsync(TestConfiguration.ServerIp, TestConfiguration.ServerPort);
 
-            await serverCommunicator.StartAsync(_serverIp, _serverPort);
-            await clientCommunicator.ConnectAsync(_serverIp, _serverPort);
-
-            var service = clientCommunicator.GetProxy<IExampleService>();
-            await clientCommunicator.DisconnectAsync();
+            var service = client.GetProxy<IExampleService>();
+            await client.DisconnectAsync();
 
             await Assert.ThrowsExceptionAsync<GenericRpcSocketOfflineException>(async () =>
                 await ExecuteWithDelayAsync(() => service.ShowMessage("Hello server!")));
@@ -79,29 +55,64 @@ namespace GenericRpc.UnitTests
         [TestMethod]
         public async Task ExecuteMethodAfterServerStoppedTest()
         {
-            using var serverCommunicator = new CommunicatorBuilder()
-                .SetSerializer(new DefaultCommunicatorSerializer())
-                .SetServerTransportLayer(new ServerSocketTransportLayer())
-                .SetDependencyResolver(new MockDependencyResolver())
-                .RegisterListenerService<IExampleService, ServerExampleService>()
-                .BuildServer();
+            using var server = CreateServer();
+            using var client = CreateClient();
 
-            using var clientCommunicator = new CommunicatorBuilder()
+            await server.StartAsync(TestConfiguration.ServerIp, TestConfiguration.ServerPort);
+            await client.ConnectAsync(TestConfiguration.ServerIp, TestConfiguration.ServerPort);
+
+            var service = client.GetProxy<IExampleService>();
+            await server.StopAsync();
+
+            await Assert.ThrowsExceptionAsync<MessageAwaitingCancelledGenericRpcException>(async () =>
+                await ExecuteWithDelayAsync(() => service.ShowMessage("Hello server!")));
+        }
+
+        [TestMethod]
+        public async Task ServerForceDisconnectClientTest()
+        {
+            using var server = CreateServer();
+            using var client = CreateClient();
+
+            await server.StartAsync(TestConfiguration.ServerIp, TestConfiguration.ServerPort);
+            ClientContext clientContext = null;
+            ClientConnected connectedHandler = (ClientContext context) => clientContext = context;
+            bool isClientDisconnected = false;
+            OnDisconnected disconnectedHandler = () => isClientDisconnected = true;
+            server.OnClientConnected += connectedHandler;
+            client.OnDisconnected += disconnectedHandler;
+
+            try
+            {
+                await client.ConnectAsync(TestConfiguration.ServerIp, TestConfiguration.ServerPort);
+                await Task.Delay(TestConfiguration.Delay);
+                Assert.IsNotNull(clientContext);
+                await server.DisconnectClientAsync(clientContext);
+
+                // NOTE: wait 750ms because now client hasn't configuration and KeepAliveLoop launches each 500ms.
+                await Task.Delay(TimeSpan.FromMilliseconds(750));
+                Assert.AreEqual(true, isClientDisconnected);
+            }
+            finally
+            {
+                server.OnClientConnected -= connectedHandler;
+                client.OnDisconnected -= disconnectedHandler;
+            }
+        }
+
+        private static IClientCommunicator CreateClient() => new CommunicatorBuilder()
                 .SetSerializer(new DefaultCommunicatorSerializer())
                 .SetClientTransportLayer(new ClientSocketTransportLayer())
                 .SetDependencyResolver(new MockDependencyResolver())
                 .RegisterProxyService<IExampleService>()
                 .BuildClient();
 
-            await serverCommunicator.StartAsync(_serverIp, _serverPort);
-            await clientCommunicator.ConnectAsync(_serverIp, _serverPort);
-
-            var service = clientCommunicator.GetProxy<IExampleService>();
-            await serverCommunicator.StopAsync();
-
-            await Assert.ThrowsExceptionAsync<MessageAwaitingCancelledGenericRpcException>(async () =>
-                await ExecuteWithDelayAsync(() => service.ShowMessage("Hello server!")));
-        }
+        private static IServerCommunicator CreateServer() => new CommunicatorBuilder()
+                .SetSerializer(new DefaultCommunicatorSerializer())
+                .SetServerTransportLayer(new ServerSocketTransportLayer())
+                .SetDependencyResolver(new MockDependencyResolver())
+                .RegisterListenerService<IExampleService, ServerExampleService>()
+                .BuildServer();
 
         private static async Task ExecuteWithDelayAsync(Action action)
         {
