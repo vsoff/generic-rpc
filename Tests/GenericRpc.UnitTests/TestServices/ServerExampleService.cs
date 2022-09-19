@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 
 namespace GenericRpc.UnitTests.TestServices
 {
@@ -13,5 +14,7 @@ namespace GenericRpc.UnitTests.TestServices
         public void ShowMessage(string message) => Debug.WriteLine($"{ClientContext.Id}: {message}");
 
         public int Sum(int number1, int number2) => number1 + number2;
+
+        public void MethodWithException() => throw new InvalidOperationException("Some error on the server side");
     }
 }

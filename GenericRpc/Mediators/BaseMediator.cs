@@ -62,12 +62,14 @@ namespace GenericRpc.Mediators
                 argumentsBytes.Add(_serializer.Serialize(arguments[i], argumentTypes[i]));
 
             // Configure awaiter and send message.
-            var requestMessage = new RpcMessage(serviceName, methodName, Guid.NewGuid(), RpcMessageType.Request, argumentsBytes.ToArray(), null);
+            var requestMessage = new RpcMessage(serviceName, methodName, Guid.NewGuid(), RpcMessageType.Request, argumentsBytes.ToArray(), null, null);
             CreateResponseAwaiter(clientContext, requestMessage.MessageId);
             await SendMessageAsync(clientContext, requestMessage);
 
             // Await response.
             var responseMessage = AwaitResponse(clientContext, requestMessage.MessageId);
+            if (responseMessage.RemoteException != null)
+                throw new RemoteGenericRpcException(responseMessage.RemoteException);
 
             // Deserialize and return result.
             var resultData = responseMessage.ResponseData == null ? null : _serializer.Deserialize(responseMessage.ResponseData, serviceMethod.ReturnType);
@@ -91,31 +93,40 @@ namespace GenericRpc.Mediators
             switch (message.MessageType)
             {
                 case RpcMessageType.Request:
-                    // Get service and method information.
-                    var servicInterfaceType = ServicesContainer.GetServiceInterfaceType(message.ServiceName);
-                    var serviceMethod = servicInterfaceType.GetMethod(message.MethodName);
-                    if (serviceMethod == null)
-                        throw new GenericRpcException($"Method with name {message.MethodName} not found");
+                    try
+                    {
+                        // Get service and method information.
+                        var servicInterfaceType = ServicesContainer.GetServiceInterfaceType(message.ServiceName);
+                        var serviceMethod = servicInterfaceType.GetMethod(message.MethodName);
+                        if (serviceMethod == null)
+                            throw new GenericRpcException($"Method with name {message.MethodName} not found");
 
-                    // TODO: We don't need in recounting parameters per each call.
-                    var argumentTypes = serviceMethod.GetParameters().Select(x => x.ParameterType).ToArray();
+                        // TODO: We don't need in recounting parameters per each call.
+                        var argumentTypes = serviceMethod.GetParameters().Select(x => x.ParameterType).ToArray();
 
-                    // TODO: In service can be many methods with the same name and arguments count.
-                    // Deserialize arguments.
-                    if (argumentTypes.Length != message.RequestData.Length)
-                        throw new GenericRpcException("Arguments count not equals");
+                        // TODO: In service can be many methods with the same name and arguments count.
+                        // Deserialize arguments.
+                        if (argumentTypes.Length != message.RequestData.Length)
+                            throw new GenericRpcException("Arguments count not equals");
 
-                    var arguments = new object[argumentTypes.Length];
-                    for (int i = 0; i < argumentTypes.Length; i++)
-                        arguments[i] = _serializer.Deserialize(message.RequestData[i], argumentTypes[i]);
+                        var arguments = new object[argumentTypes.Length];
+                        for (int i = 0; i < argumentTypes.Length; i++)
+                            arguments[i] = _serializer.Deserialize(message.RequestData[i], argumentTypes[i]);
 
-                    // Invoke method and send result.
-                    var service = GetListenerService(clientContext, servicInterfaceType);
-                    var result = serviceMethod.Invoke(service, arguments);
-                    var resultData = result == null ? null : _serializer.Serialize(result, serviceMethod.ReturnType);
+                        // Invoke method and send result.
+                        var service = GetListenerService(clientContext, servicInterfaceType);
 
-                    var responseMessage = new RpcMessage(message.ServiceName, message.MethodName, message.MessageId, RpcMessageType.Response, null, resultData);
-                    await SendMessageAsync(clientContext, responseMessage);
+                        var result = serviceMethod.Invoke(service, arguments);
+                        var resultData = result == null ? null : _serializer.Serialize(result, serviceMethod.ReturnType);
+
+                        var responseMessage = new RpcMessage(message.ServiceName, message.MethodName, message.MessageId, RpcMessageType.Response, null, resultData, null);
+                        await SendMessageAsync(clientContext, responseMessage);
+                    }
+                    catch (Exception ex)
+                    {
+                        var responseMessage = new RpcMessage(message.ServiceName, message.MethodName, message.MessageId, RpcMessageType.Response, null, null, new RemoteExceptionInfo(ex.Message));
+                        await SendMessageAsync(clientContext, responseMessage);
+                    }
                     break;
                 case RpcMessageType.Response:
                     SetResponse(clientContext, message);

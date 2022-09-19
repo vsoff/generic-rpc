@@ -7,5 +7,6 @@
         void ShowMessage(string message);
         int GetIndex();
         void Apply();
+        void MethodWithException();
     }
 }

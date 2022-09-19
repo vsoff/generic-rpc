@@ -100,6 +100,21 @@ namespace GenericRpc.UnitTests
             }
         }
 
+        [TestMethod]
+        public async Task ExecuteMethodWithExceptionTest()
+        {
+            using var server = CreateServer();
+            using var client = CreateClient();
+
+            await server.StartAsync(TestConfiguration.ServerIp, TestConfiguration.ServerPort);
+            await client.ConnectAsync(TestConfiguration.ServerIp, TestConfiguration.ServerPort);
+
+            var service = client.GetProxy<IExampleService>();
+
+            await Assert.ThrowsExceptionAsync<RemoteGenericRpcException>(async () =>
+                await ExecuteWithDelayAsync(() => service.MethodWithException()));
+        }
+
         private static IClientCommunicator CreateClient() => new CommunicatorBuilder()
                 .SetSerializer(new DefaultCommunicatorSerializer())
                 .SetClientTransportLayer(new ClientSocketTransportLayer())

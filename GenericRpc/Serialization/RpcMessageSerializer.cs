@@ -38,14 +38,16 @@ namespace GenericRpc.SocketTransport.Common
             if (messageType == RpcMessageType.KeepAlive)
                 return RpcMessage.KeepAliveMessage;
 
+            byte[][] requestData = null;
+            byte[] resoponseData = null;
+
             const int guidBytesCount = 16;
             var serviceName = reader.ReadString();
             var methodName = reader.ReadString();
             var messageIdBytes = reader.ReadBytes(guidBytesCount);
             var messageId = new Guid(messageIdBytes);
+            var exceptionInfo = ReadExceptionInfo(reader);
 
-            byte[][] requestData = null;
-            byte[] resoponseData = null;
             switch (messageType)
             {
                 case RpcMessageType.Request:
@@ -73,7 +75,7 @@ namespace GenericRpc.SocketTransport.Common
                 default: throw new GenericRpcSerializationException($"Unexpected type of {nameof(RpcMessageType)}");
             }
 
-            return new RpcMessage(serviceName, methodName, messageId, messageType, requestData, resoponseData);
+            return new RpcMessage(serviceName, methodName, messageId, messageType, requestData, resoponseData, exceptionInfo);
         }
 
         public static void Write(BinaryWriter writer, RpcMessage source)
@@ -85,6 +87,7 @@ namespace GenericRpc.SocketTransport.Common
             writer.Write(source.ServiceName);
             writer.Write(source.MethodName);
             writer.Write(source.MessageId.ToByteArray());
+            WriteExceptionInfo(writer, source.RemoteException);
             switch (source.MessageType)
             {
                 case RpcMessageType.Request:
@@ -111,6 +114,26 @@ namespace GenericRpc.SocketTransport.Common
                     }
                 default: throw new GenericRpcSerializationException($"Unexpected type of {nameof(RpcMessageType)}");
             }
+        }
+
+        private static RemoteExceptionInfo ReadExceptionInfo(BinaryReader reader)
+        {
+            var isNull = reader.ReadBoolean();
+            if (isNull)
+                return null;
+
+            var errorText = reader.ReadString();
+            return new RemoteExceptionInfo(errorText);
+        }
+
+        private static void WriteExceptionInfo(BinaryWriter writer, RemoteExceptionInfo source)
+        {
+            var isNull = source == null;
+            writer.Write(isNull);
+            if (isNull)
+                return;
+
+            writer.Write(source.ErrorText);
         }
     }
 }
