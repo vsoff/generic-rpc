@@ -14,15 +14,12 @@ namespace GenericRpc.ServicesGeneration
         private readonly IReadOnlyDictionary<string, ServiceTypesInfo> _serviceTypeInfoByName;
 
         public readonly IContainer ClientContainer;
-        private readonly IListenerDependencyResolver _dependencyResolver;
         private readonly IMediator _mediator;
 
         public ServicesContainerRoot(
             IReadOnlyCollection<ServiceTypesInfo> serviceTypesInfos,
-            IListenerDependencyResolver dependencyResolver,
             IMediator mediator)
         {
-            _dependencyResolver = dependencyResolver ?? throw new ArgumentNullException(nameof(dependencyResolver));
             _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
             if (serviceTypesInfos == null) throw new ArgumentNullException(nameof(serviceTypesInfos));
 
@@ -64,10 +61,19 @@ namespace GenericRpc.ServicesGeneration
         private Container BuildContainer(ClientContext context = null)
         {
             var proxyServiceByInterface = _serviceTypeInfoByName.Values.Where(x => x.IsProxy)
-                .ToDictionary(x => x.InterfaceType, x => ProxyGenerator.ActivateProxyInstance(x.RealizationType, _mediator, context));
+                .ToDictionary(
+                    proxyTypeInfo => proxyTypeInfo.InterfaceType,
+                    proxyTypeInfo => ProxyGenerator.ActivateProxyInstance(proxyTypeInfo.RealizationType, _mediator, context));
 
             var listenerServiceByInterface = _serviceTypeInfoByName.Values.Where(x => !x.IsProxy)
-                .ToDictionary(x => x.InterfaceType, x => _dependencyResolver.Resolve(x.RealizationType, context));
+                .ToDictionary(
+                    listenerTypeInfo => listenerTypeInfo.InterfaceType,
+                    listenerTypeInfo =>
+                    {
+                        var service = listenerTypeInfo.ListenerFactoryMethod.Invoke();
+                        ((ListenerService)service).SetClientContext(context);
+                        return service;
+                    });
 
             return new Container(proxyServiceByInterface, listenerServiceByInterface);
         }

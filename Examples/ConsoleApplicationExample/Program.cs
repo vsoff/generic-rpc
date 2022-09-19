@@ -35,7 +35,6 @@ try
         var serverCommunicator = new CommunicatorBuilder()
                         .SetSerializer(new DefaultCommunicatorSerializer())
                         .SetServerTransportLayer(transportLayer)
-                        .SetDependencyResolver(new MockDependencyResolver())
                         .RegisterListenerService<IServerExampleService, ServerExampleService>()
                         .RegisterProxyService<IClientExampleService>()
                         .BuildServer();
@@ -96,7 +95,6 @@ try
         var clientCommunicator = new CommunicatorBuilder()
             .SetSerializer(new DefaultCommunicatorSerializer())
             .SetClientTransportLayer(new ClientSocketTransportLayer())
-            .SetDependencyResolver(new MockDependencyResolver())
             .RegisterProxyService<IServerExampleService>()
             .RegisterListenerService<IClientExampleService, ClientExampleService>()
             .BuildClient();

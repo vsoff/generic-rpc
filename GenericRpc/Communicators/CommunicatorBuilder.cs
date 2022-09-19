@@ -10,13 +10,13 @@ namespace GenericRpc.Communicators
 {
     public sealed class CommunicatorBuilder
     {
-        private readonly Dictionary<Type, Type> _listenServiceTypeByInterface = new Dictionary<Type, Type>();
+        private readonly Dictionary<Type, Func<object>> _listenerFactoryMethodByInterface = new Dictionary<Type, Func<object>>();
+        private readonly Dictionary<Type, Type> _listenerServiceTypeByInterface = new Dictionary<Type, Type>();
         private readonly HashSet<Type> _proxyServiceTypes = new HashSet<Type>();
 
         private ICommunicatorSerializer _serializer;
         private IServerTransportLayer _serverTransportLayer;
         private IClientTransportLayer _clientTransportLayer;
-        private IListenerDependencyResolver _dependencyResolver;
 
         public CommunicatorBuilder SetSerializer(ICommunicatorSerializer serializer)
         {
@@ -25,25 +25,16 @@ namespace GenericRpc.Communicators
             return this;
         }
 
-        public CommunicatorBuilder SetDependencyResolver(IListenerDependencyResolver dependencyResolver)
-        {
-            if (_dependencyResolver != null) throw new GenericRpcException("Dependency resolver already setted");
-            _dependencyResolver = dependencyResolver ?? throw new ArgumentNullException(nameof(dependencyResolver));
-            return this;
-        }
-
         public CommunicatorBuilder SetServerTransportLayer(IServerTransportLayer serverTransportLayer)
         {
-            if (_serverTransportLayer != null) throw new GenericRpcException("Server transport layer already setted");
-            if (_clientTransportLayer != null) throw new GenericRpcException("Client transport layer already setted");
+            ThrowIfTransportAlreadySetted();
             _serverTransportLayer = serverTransportLayer ?? throw new ArgumentNullException(nameof(serverTransportLayer));
             return this;
         }
 
         public CommunicatorBuilder SetClientTransportLayer(IClientTransportLayer clientTransportLayer)
         {
-            if (_serverTransportLayer != null) throw new GenericRpcException("Server transport layer already setted");
-            if (_clientTransportLayer != null) throw new GenericRpcException("Client transport layer already setted");
+            ThrowIfTransportAlreadySetted();
             _clientTransportLayer = clientTransportLayer ?? throw new ArgumentNullException(nameof(clientTransportLayer));
             return this;
         }
@@ -61,15 +52,23 @@ namespace GenericRpc.Communicators
         }
 
         public CommunicatorBuilder RegisterListenerService<TServiceInterface, TServiceRealization>()
-            where TServiceRealization : TServiceInterface
+            where TServiceRealization : ListenerService, TServiceInterface, new()
+            => RegisterListenerService<TServiceInterface, TServiceRealization>(() => new TServiceRealization());
+
+        public CommunicatorBuilder RegisterListenerService<TServiceInterface, TServiceRealization>(Func<TServiceRealization> factoryMethod)
+            where TServiceRealization : ListenerService, TServiceInterface
         {
+            if (factoryMethod == null) throw new ArgumentNullException(nameof(factoryMethod));
+
             if (!typeof(TServiceInterface).IsInterface)
                 throw new GenericRpcException($"Type `{nameof(TServiceInterface)}` isn't an interface");
 
-            if (_listenServiceTypeByInterface.ContainsKey(typeof(TServiceInterface)))
+            if (_listenerServiceTypeByInterface.ContainsKey(typeof(TServiceInterface)))
                 throw new GenericRpcException($"Realization for interface `{nameof(TServiceInterface)}` already registered");
 
-            _listenServiceTypeByInterface.Add(typeof(TServiceInterface), typeof(TServiceRealization));
+            _listenerServiceTypeByInterface.Add(typeof(TServiceInterface), typeof(TServiceRealization));
+            _listenerFactoryMethodByInterface.Add(typeof(TServiceInterface), factoryMethod);
+
             return this;
         }
 
@@ -101,18 +100,25 @@ namespace GenericRpc.Communicators
         {
             var servicesTypeInfos = new List<ServiceTypesInfo>();
 
-            foreach (var typesPair in _listenServiceTypeByInterface)
+            foreach (var typesPair in _listenerServiceTypeByInterface)
             {
-                servicesTypeInfos.Add(new ServiceTypesInfo(typesPair.Key, typesPair.Value, false));
+                var factoryMethod = _listenerFactoryMethodByInterface[typesPair.Key];
+                servicesTypeInfos.Add(new ServiceTypesInfo(typesPair.Key, typesPair.Value, false, factoryMethod));
             }
 
             foreach (var proxyInterfaceType in _proxyServiceTypes)
             {
                 var proxyRealizationType = ProxyGenerator.GenerateProxyType(proxyInterfaceType);
-                servicesTypeInfos.Add(new ServiceTypesInfo(proxyInterfaceType, proxyRealizationType, true));
+                servicesTypeInfos.Add(new ServiceTypesInfo(proxyInterfaceType, proxyRealizationType, true, null));
             }
 
-            return new ServicesContainerRoot(servicesTypeInfos, _dependencyResolver, mediator);
+            return new ServicesContainerRoot(servicesTypeInfos, mediator);
+        }
+
+        private void ThrowIfTransportAlreadySetted()
+        {
+            if (_serverTransportLayer != null) throw new GenericRpcException("Server transport layer already setted");
+            if (_clientTransportLayer != null) throw new GenericRpcException("Client transport layer already setted");
         }
     }
 }

@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace GenericRpc.SocketTransport.Common
 {
-    public static class SocketExtensions
+    internal static class SocketExtensions
     {
         private const int DefaultBufferSize = 256;
 

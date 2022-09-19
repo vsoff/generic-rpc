@@ -103,14 +103,12 @@ namespace GenericRpc.UnitTests
         private static IClientCommunicator CreateClient() => new CommunicatorBuilder()
                 .SetSerializer(new DefaultCommunicatorSerializer())
                 .SetClientTransportLayer(new ClientSocketTransportLayer())
-                .SetDependencyResolver(new MockDependencyResolver())
                 .RegisterProxyService<IExampleService>()
                 .BuildClient();
 
         private static IServerCommunicator CreateServer() => new CommunicatorBuilder()
                 .SetSerializer(new DefaultCommunicatorSerializer())
                 .SetServerTransportLayer(new ServerSocketTransportLayer())
-                .SetDependencyResolver(new MockDependencyResolver())
                 .RegisterListenerService<IExampleService, ServerExampleService>()
                 .BuildServer();
 
@@ -125,16 +123,6 @@ namespace GenericRpc.UnitTests
             {
                 Assert.Fail("Task didn't complete in 5 seconds");
                 throw;
-            }
-        }
-
-        private class MockDependencyResolver : IListenerDependencyResolver
-        {
-            public object Resolve(Type type, ClientContext context)
-            {
-                Assert.AreEqual(type, typeof(ServerExampleService), "Unexpected type");
-
-                return new ServerExampleService(context);
             }
         }
     }
